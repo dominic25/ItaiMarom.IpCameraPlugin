@@ -62,6 +62,13 @@ scope, the last three are larger and can wait.
   packager, a loopback segment server, cleanup, and the same session lifecycle as the MJPEG relay.
   Only worth it for smoother playback on iPhones; MJPEG works everywhere.
 
+- [ ] **Store identity and branding**
+  Keep "Macro Deck" out of the plugin name, package id, namespace, publisher and icon. The Creator
+  Guidelines treat those as identity, and a platform name there implies an official product. Keep
+  `IP Camera`, `com.itaim.ip-camera` and publisher `itaim`, with a generic camera icon. Use "Macro
+  Deck" only in the description and README, as a statement of compatibility, and check the Store
+  title, screenshots and icon against the naming and branding rules before submitting.
+
 - [ ] **Publishing**
   Add the GitHub repository and matching publisher to `manifest.json`, add the Store badge to the
   README, push the repository, run the CI and release workflows, and submit through the Creator Portal.
