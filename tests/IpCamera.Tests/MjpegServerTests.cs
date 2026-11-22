@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using System.Threading.Channels;
+using IpCamera.Cameras;
 using IpCamera.Streaming;
 using MacroDeck.Sdk.VideoStreams;
 using NUnit.Framework;
@@ -141,7 +142,20 @@ public sealed class MjpegServerTests
 
 		public VideoStreamState State => VideoStreamState.Connected;
 
-		public int? Width => 640;
+		public CameraDefinition Definition { get; } = new(
+		"camera-1",
+		"Test camera",
+		CameraSourceKind.Snapshot,
+		new Uri("http://127.0.0.1/snapshot.jpg"),
+		null,
+		null,
+		5,
+		640,
+		"tcp");
+
+	public bool HasFailed => false;
+
+	public int? Width => 640;
 
 		public int? Height => 360;
 
@@ -173,6 +187,23 @@ public sealed class MjpegServerTests
 					_subscribers.Remove(channel);
 				}
 			});
+		}
+
+		public Task RestartAsync()
+		{
+			return Task.CompletedTask;
+		}
+
+		public bool PrimeResult { get; set; } = true;
+
+		public Task<bool> PrimeAsync(TimeSpan timeout, CancellationToken cancellationToken)
+		{
+			return Task.FromResult(PrimeResult);
+		}
+
+		public ValueTask DisposeAsync()
+		{
+			return ValueTask.CompletedTask;
 		}
 
 		public void Publish(byte[] frame)

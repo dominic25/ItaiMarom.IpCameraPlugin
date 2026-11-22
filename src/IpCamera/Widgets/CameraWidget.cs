@@ -1,4 +1,5 @@
 using System.Text.Json;
+using IpCamera.Actions;
 using MacroDeck.Sdk.Ui;
 using MacroDeck.Sdk.Widgets;
 using MacroDeck.Ui.Config;
@@ -22,6 +23,9 @@ internal static class CameraWidget
 
 	public const string CameraKey = "camera";
 	public const string FitKey = "fit";
+	public const string ZoomKey = "zoom";
+	public const string OffsetXKey = "offsetX";
+	public const string OffsetYKey = "offsetY";
 
 	public const string FitContain = "contain";
 	public const string FitCover = "cover";
@@ -32,6 +36,18 @@ internal static class CameraWidget
 		  "properties": {
 		    "camera": { "type": "string" },
 		    "fit": { "type": "string" },
+		    "zoom": { "type": "number" },
+		    "offsetX": { "type": "number" },
+		    "offsetY": { "type": "number" },
+		    "flows": { "type": "array" },
+		    "backgroundColor": { "type": "string" },
+		    "label": { "type": "string" },
+		    "labelColor": { "type": "string" },
+		    "fontFaceId": { "type": "string" },
+		    "fontSize": { "type": "number" },
+		    "textAlign": { "type": "string" },
+		    "labelPosition": { "type": "string" },
+		    "accentColor": { "type": "string" },
 		    "border": { "type": "object" }
 		  }
 		}
@@ -45,7 +61,19 @@ internal static class CameraWidget
 			Strings.Widgets.Camera.Description(),
 			DefaultData: $$"""{"{{CameraKey}}":"","{{FitKey}}":"{{FitCover}}"}""",
 			DataSchema: DataSchema,
-			HasConfiguration: true);
+			HasConfiguration: true)
+		{
+			SupportsFlows = true,
+			DefaultShortPressAction = new WidgetDefaultAction(ShowCameraAction.ActionId),
+			AppearanceProperties =
+			[
+				WidgetAppearanceProperty.BackgroundColor,
+				WidgetAppearanceProperty.Label,
+				WidgetAppearanceProperty.LabelColor,
+				WidgetAppearanceProperty.Font,
+				WidgetAppearanceProperty.AccentColor
+			]
+		};
 	}
 
 	public static UiElement BuildView(UiSurface surface, string? providerId)
@@ -60,15 +88,89 @@ internal static class CameraWidget
 			return Placeholder(Strings.Widgets.Camera.NotConfigured());
 		}
 
+		var appearance = UiWidgetAppearance.Read(data);
 		var fit = ReadString(data, FitKey) == FitContain ? FitContain : FitCover;
 
-		return new UiVideoStream
+		UiElement content = new UiVideoStream
 		{
 			Key = "stream",
 			Stream = UiValue.Of(new UiVideoStreamReference { Provider = providerId, Id = cameraId }),
 			Fit = UiValue.Of(fit),
 			Fill = true,
 			Fallback = Placeholder(Strings.Widgets.Camera.UpdateRequired())
+		};
+
+		if (fit == FitCover)
+		{
+			var zoom = Math.Clamp(ReadDouble(data, ZoomKey, 1), 1, 4);
+			var offsetX = Math.Clamp(ReadDouble(data, OffsetXKey, 0), -0.75, 0.75);
+			var offsetY = Math.Clamp(ReadDouble(data, OffsetYKey, 0), -0.75, 0.75);
+
+			if (zoom > 1 || offsetX != 0 || offsetY != 0)
+			{
+				content = new UiTransform
+				{
+					Key = "crop",
+					Fill = true,
+					Zoom = UiValue.Of(zoom),
+					OffsetX = UiValue.Of(offsetX),
+					OffsetY = UiValue.Of(offsetY),
+					Children = [content]
+				};
+			}
+		}
+
+		UiElement[] children = BuildLabel(appearance) is { } label
+			? [content, label]
+			: [content];
+
+		return new UiStack
+		{
+			Key = "root",
+			Fill = true,
+			Background = appearance.BackgroundColor is { Length: > 0 } background
+				? UiValue.Of(background)
+				: default,
+			Children =
+			[
+				new UiLayer
+				{
+					Key = "layer",
+					Fill = true,
+					Children = children
+				}
+			]
+		};
+	}
+
+	public static UiElement BuildModal(UiSurface surface, string? providerId)
+	{
+		var data = UiWidgetSurface.Data(surface);
+		var cameraId = ReadString(data, CameraKey);
+
+		if (string.IsNullOrEmpty(cameraId) || string.IsNullOrEmpty(providerId))
+		{
+			return Placeholder(Strings.Widgets.Camera.NotConfigured());
+		}
+
+		return new UiStack
+		{
+			Key = "modal",
+			Fill = true,
+			Justify = UiValue.Of(UiComponentJustify.Center),
+			Align = UiValue.Of(UiComponentAlignments.Center),
+			Padding = 0.02,
+			Children =
+			[
+				new UiVideoStream
+				{
+					Key = "stream",
+					Stream = UiValue.Of(new UiVideoStreamReference { Provider = providerId, Id = cameraId }),
+					Fit = UiValue.Of(FitContain),
+					Fill = true,
+					Fallback = Placeholder(Strings.Widgets.Camera.UpdateRequired())
+				}
+			]
 		};
 	}
 
@@ -77,6 +179,15 @@ internal static class CameraWidget
 		var data = UiWidgetSurface.Data(surface);
 		var camera = new UiState<string>(ReadString(data, CameraKey) ?? string.Empty);
 		var fit = new UiState<string>(ReadString(data, FitKey) == FitContain ? FitContain : FitCover);
+		var zoom = new UiState<double>(Math.Clamp(ReadDouble(data, ZoomKey, 1), 1, 4));
+		var offsetX = new UiState<double>(Math.Clamp(ReadDouble(data, OffsetXKey, 0), -0.75, 0.75));
+		var offsetY = new UiState<double>(Math.Clamp(ReadDouble(data, OffsetYKey, 0), -0.75, 0.75));
+		var flows = new UiState<JsonElement>(
+			data.ValueKind == JsonValueKind.Object &&
+			data.TryGetProperty("flows", out var stored) &&
+			stored.ValueKind == JsonValueKind.Array
+				? stored.Clone()
+				: JsonSerializer.SerializeToElement(Array.Empty<object>()));
 
 		return new UiWidgetConfiguration
 		{
@@ -106,10 +217,119 @@ internal static class CameraWidget
 							new UiOption { Value = FitContain, Label = Strings.Widgets.Camera.Config.FitContain() }
 						]),
 						Binding = Bind.To(fit)
+					},
+					new UiNumberInput
+					{
+						Key = ZoomKey,
+						Label = Strings.Widgets.Camera.Config.Zoom(),
+						Description = Strings.Widgets.Camera.Config.ZoomDescription(),
+						Min = 1,
+						Max = 4,
+						Step = 0.05,
+						ShowSlider = true,
+						Binding = Bind.To(zoom),
+						VisibleWhen = VisibleWhenCover()
+					},
+					new UiNumberInput
+					{
+						Key = OffsetXKey,
+						Label = Strings.Widgets.Camera.Config.HorizontalPosition(),
+						Min = -0.75,
+						Max = 0.75,
+						Step = 0.01,
+						ShowSlider = true,
+						Binding = Bind.To(offsetX),
+						VisibleWhen = VisibleWhenCover()
+					},
+					new UiNumberInput
+					{
+						Key = OffsetYKey,
+						Label = Strings.Widgets.Camera.Config.VerticalPosition(),
+						Min = -0.75,
+						Max = 0.75,
+						Step = 0.01,
+						ShowSlider = true,
+						Binding = Bind.To(offsetY),
+						VisibleWhen = VisibleWhenCover()
+					},
+					UiWidgetAppearance.Section(data, UiWidgetAppearanceFields.All)
+				]
+			},
+			Editor = new UiWidgetEditor
+			{
+				Key = "editor",
+				Children =
+				[
+					new UiActionsListEditor
+					{
+						Key = "flows",
+						Binding = Bind.To(flows),
+						CanRun = true
 					}
 				]
 			}
 		};
+	}
+
+	private static UiValue<UiVisibleWhen> VisibleWhenCover()
+	{
+		return UiValue.Of(new UiVisibleWhen { ParameterName = FitKey, Values = [FitCover] });
+	}
+
+	private static UiStack? BuildLabel(UiWidgetAppearanceValues appearance)
+	{
+		if (string.IsNullOrWhiteSpace(appearance.Label))
+		{
+			return null;
+		}
+
+		var size = Math.Clamp((appearance.FontSize ?? 100) / 100d * 0.10, 0.05, 0.25);
+		var justify = appearance.LabelPosition switch
+		{
+			"top" => UiComponentJustify.Start,
+			"center" => UiComponentJustify.Center,
+			_ => UiComponentJustify.End
+		};
+		var align = appearance.TextAlign switch
+		{
+			"left" => UiComponentAlignments.Start,
+			"right" => UiComponentAlignments.End,
+			_ => UiComponentAlignments.Center
+		};
+
+		return new UiStack
+		{
+			Key = "label-overlay",
+			Fill = true,
+			Justify = UiValue.Of(justify),
+			Align = UiValue.Of(UiComponentAlignments.Stretch),
+			Padding = 0.05,
+			Children =
+			[
+				new UiTextRun
+				{
+					Key = "label",
+					Text = appearance.Label,
+					Size = size,
+					MinSize = size * 0.7,
+					Align = UiValue.Of(align),
+					Color = UiValue.Of(string.IsNullOrEmpty(appearance.LabelColor) ? "#ffffff" : appearance.LabelColor),
+					FontFace = appearance.FontFaceId is { Length: > 0 } face ? UiValue.Of(face) : default,
+					MaxLines = UiValue.Of(2),
+					Wrap = UiValue.Of(true)
+				}
+			]
+		};
+	}
+
+	private static double ReadDouble(JsonElement data, string key, double fallback)
+	{
+		return data.ValueKind == JsonValueKind.Object &&
+			data.TryGetProperty(key, out var value) &&
+			value.ValueKind == JsonValueKind.Number &&
+			value.TryGetDouble(out var number)
+				? number
+				: fallback;
 	}
 
 	private static UiStack Placeholder(MacroDeck.Localization.LocalizedText hint)

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Threading.Channels;
 using IpCamera.Cameras;
 using IpCamera.Streaming;
@@ -14,12 +15,14 @@ namespace IpCamera.VideoStreams;
 internal sealed class CameraStreamProvider : IVideoStreamProvider, IAsyncDisposable
 {
 	private const string MjpegTransport = "mjpeg";
+	private static readonly TimeSpan _primeTimeout = TimeSpan.FromSeconds(10);
 
 	private readonly CameraRegistry _registry;
 	private readonly IMjpegEndpoint _endpoint;
 	private readonly IVideoStreamProviderContext _context;
 	private readonly ILogger _logger;
 	private readonly CancellationTokenSource _dispose = new();
+	private readonly ConcurrentDictionary<string, string> _sessions = new(StringComparer.Ordinal);
 	private readonly Channel<bool> _pendingNotifications = Channel.CreateBounded<bool>(
 		new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.DropOldest });
 
@@ -69,7 +72,7 @@ internal sealed class CameraStreamProvider : IVideoStreamProvider, IAsyncDisposa
 		return Task.FromResult(streams);
 	}
 
-	public Task<VideoStreamSessionDescription> OpenAsync(
+	public async Task<VideoStreamSessionDescription> OpenAsync(
 		VideoStreamOpenRequest request,
 		CancellationToken cancellationToken)
 	{
@@ -87,7 +90,20 @@ internal sealed class CameraStreamProvider : IVideoStreamProvider, IAsyncDisposa
 				VideoStreamErrorCode.UnknownStream,
 				$"No camera with id '{request.StreamId}' is configured.");
 
-		return Task.FromResult(VideoStreamSessionDescription.Mjpeg(_endpoint.UrlFor(camera.Id)));
+		if (_registry.Find(camera.Id) is { } stream)
+		{
+			var primed = await stream.PrimeAsync(_primeTimeout, cancellationToken).ConfigureAwait(false);
+			if (!primed)
+			{
+				throw new VideoStreamException(
+					VideoStreamErrorCode.StreamUnavailable,
+					"The camera did not deliver a frame in time.");
+			}
+		}
+
+		_sessions[request.SessionId] = camera.Id;
+
+		return VideoStreamSessionDescription.Mjpeg(_endpoint.UrlFor(camera.Id));
 	}
 
 	public Task SuspendAsync(string sessionId, CancellationToken cancellationToken)
@@ -100,7 +116,9 @@ internal sealed class CameraStreamProvider : IVideoStreamProvider, IAsyncDisposa
 		VideoStreamSessionReason reason,
 		CancellationToken cancellationToken)
 	{
-		// The relay aborts the HTTP response, which ends the subscription; nothing is held per session here.
+		// The relay aborts the HTTP response, which ends the subscription; only the session bookkeeping
+		// is left here.
+		_sessions.TryRemove(sessionId, out _);
 		return Task.CompletedTask;
 	}
 
@@ -125,9 +143,45 @@ internal sealed class CameraStreamProvider : IVideoStreamProvider, IAsyncDisposa
 		return state == VideoStreamState.Connected ? VideoStreamState.Connected : VideoStreamState.Connecting;
 	}
 
-	private void OnStreamChanged(CameraStream stream)
+	private void OnStreamChanged(IFrameStream stream)
 	{
 		_pendingNotifications.Writer.TryWrite(true);
+
+		foreach (var (sessionId, cameraId) in _sessions)
+		{
+			if (cameraId == stream.Definition.Id)
+			{
+				_ = ReportSessionStateAsync(sessionId, stream);
+			}
+		}
+	}
+
+	internal async Task ReportSessionStateAsync(string sessionId, IFrameStream stream)
+	{
+		try
+		{
+			if (stream.State == VideoStreamState.Connected)
+			{
+				await _context.UpdateSessionAsync(
+					sessionId,
+					VideoStreamSessionState.Active,
+					reason: VideoStreamSessionReason.SourceRecovered,
+					cancellationToken: _dispose.Token).ConfigureAwait(false);
+			}
+			else if (stream.HasFailed)
+			{
+				await _context.UpdateSessionAsync(
+					sessionId,
+					VideoStreamSessionState.Reconnecting,
+					reason: VideoStreamSessionReason.SourceLost,
+					message: Strings.VideoStreams.Session.Offline(),
+					cancellationToken: _dispose.Token).ConfigureAwait(false);
+			}
+		}
+		catch (Exception exception) when (exception is not OperationCanceledException)
+		{
+			_logger.Debug("Could not report a session state: {Reason}", exception.Message);
+		}
 	}
 
 	private async Task NotifyLoopAsync(CancellationToken cancellationToken)

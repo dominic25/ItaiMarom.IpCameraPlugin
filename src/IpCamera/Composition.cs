@@ -24,8 +24,10 @@ internal static class Composition
 			services.GetRequiredService<IHttpClientFactory>(),
 			services.GetRequiredService<ILogger>()));
 		builder.Services.AddSingleton(services => new CameraRegistry(
-			services.GetRequiredService<CameraSourceFactory>().Create,
-			services.GetRequiredService<ILogger>()));
+			camera => new CameraStream(
+				camera,
+				services.GetRequiredService<CameraSourceFactory>().Create,
+				services.GetRequiredService<ILogger>())));
 		builder.Services.AddSingleton(services => new MjpegServer(
 			cameraId => services.GetRequiredService<CameraRegistry>().Find(cameraId),
 			services.GetRequiredService<ILogger>()));

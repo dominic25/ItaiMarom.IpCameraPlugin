@@ -11,11 +11,15 @@ converted with ffmpeg.
 ## What it adds to Macro Deck
 
 - **A Camera widget**: pick one of the configured cameras, choose whether the picture fills the tile or
-  fits inside it. The widget is a live video stream, so it also follows the deck's theme and size.
+  fits inside it, and pan or zoom the cropped picture when it fills. The label, background and colours
+  follow Macro Deck's standard widget appearance. A short press opens the camera full screen.
 - **A video stream provider**: every configured camera is listed under Source in any widget or action
   that can show a video stream, not only in this plugin's own widget.
-- **A camera setup flow**: one Macro Deck configuration entry per camera. Add as many as you like, edit
-  or remove each from the integration page.
+- **A camera setup flow**: one Macro Deck configuration entry per camera. The flow fetches one frame
+  before saving, so a wrong URL, rejected credentials or a go2rtc stream that only offers H.265 is
+  reported immediately.
+- **Offline feedback**: a camera that drops out shows "The camera is offline. Reconnecting." on its
+  widget, and the integration page offers a Retry action.
 
 ## Requirements
 
@@ -174,6 +178,7 @@ src/IpCamera/
   VideoStreams/              the video stream provider
   Widgets/                    camera widget view, configuration, UI session adapter
   ConfigFlow/                 the camera setup flow
+  Actions/                    the full-screen camera action
   Localization/Strings.resx   all user-facing text
 ```
 

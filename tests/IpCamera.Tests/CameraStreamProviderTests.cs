@@ -5,6 +5,7 @@ using MacroDeck.Plugin.Testing.Fakes;
 using MacroDeck.Sdk.VideoStreams;
 using NUnit.Framework;
 using Serilog;
+using System.Threading.Channels;
 
 namespace IpCamera.Tests;
 
@@ -35,7 +36,7 @@ public sealed class CameraStreamProviderTests
 
 	private static async Task<CameraRegistry> RegistryAsync(params CameraDefinition[] cameras)
 	{
-		var registry = new CameraRegistry(_ => throw new InvalidOperationException("No source is started here."), _logger);
+		var registry = new CameraRegistry(camera => new StatefulStream(camera));
 		await registry.SetCamerasAsync(cameras, CancellationToken.None);
 		return registry;
 	}
@@ -122,6 +123,121 @@ public sealed class CameraStreamProviderTests
 			CancellationToken.None));
 
 		Assert.That(exception!.ErrorCode, Is.EqualTo(VideoStreamErrorCode.TransportNotAccepted));
+	}
+
+	[Test]
+	public async Task A_camera_that_sends_no_frame_refuses_the_session()
+	{
+		var camera = Camera();
+		var stream = new StatefulStream(camera) { PrimeResult = false };
+		await using var registry = new CameraRegistry(_ => stream);
+		await registry.SetCamerasAsync([camera], CancellationToken.None);
+		await using var provider = new CameraStreamProvider(
+			registry,
+			new StubEndpoint(),
+			new FakeVideoStreamProviderContext(),
+			_logger);
+
+		var exception = Assert.ThrowsAsync<VideoStreamException>(() => provider.OpenAsync(
+			new VideoStreamOpenRequest("session-1", camera.Id, ["mjpeg"]),
+			CancellationToken.None));
+
+		Assert.That(exception!.ErrorCode, Is.EqualTo(VideoStreamErrorCode.StreamUnavailable));
+	}
+
+	[Test]
+	public async Task A_failed_camera_reports_its_session_as_reconnecting()
+	{
+		var camera = Camera();
+		var stream = new StatefulStream(camera);
+		await using var registry = new CameraRegistry(_ => stream);
+		await registry.SetCamerasAsync([camera], CancellationToken.None);
+		var context = new FakeVideoStreamProviderContext();
+		await using var provider = new CameraStreamProvider(
+			registry,
+			new StubEndpoint(),
+			context,
+			_logger);
+
+		await provider.OpenAsync(
+			new VideoStreamOpenRequest("session-1", camera.Id, ["mjpeg"]),
+			CancellationToken.None);
+
+		stream.State = VideoStreamState.Disconnected;
+		stream.HasFailed = true;
+		await provider.ReportSessionStateAsync("session-1", stream);
+
+		var update = context.Calls.Last(call => call.Kind == VideoStreamProviderCallKind.SessionUpdate);
+		Assert.That(update.State, Is.EqualTo(VideoStreamSessionState.Reconnecting));
+		Assert.That(update.Reason, Is.EqualTo(VideoStreamSessionReason.SourceLost));
+		Assert.That(update.Message, Is.Not.Null);
+	}
+
+	[Test]
+	public async Task A_recovered_camera_reports_its_session_as_active()
+	{
+		var camera = Camera();
+		var stream = new StatefulStream(camera) { State = VideoStreamState.Connected };
+		await using var registry = new CameraRegistry(_ => stream);
+		await registry.SetCamerasAsync([camera], CancellationToken.None);
+		var context = new FakeVideoStreamProviderContext();
+		await using var provider = new CameraStreamProvider(
+			registry,
+			new StubEndpoint(),
+			context,
+			_logger);
+
+		await provider.OpenAsync(
+			new VideoStreamOpenRequest("session-1", camera.Id, ["mjpeg"]),
+			CancellationToken.None);
+		await provider.ReportSessionStateAsync("session-1", stream);
+
+		var update = context.Calls.Last(call => call.Kind == VideoStreamProviderCallKind.SessionUpdate);
+		Assert.That(update.State, Is.EqualTo(VideoStreamSessionState.Active));
+		Assert.That(update.Reason, Is.EqualTo(VideoStreamSessionReason.SourceRecovered));
+	}
+
+	private sealed class StatefulStream(CameraDefinition definition) : IFrameStream
+	{
+		public CameraDefinition Definition => definition;
+
+		public VideoStreamState State { get; set; } = VideoStreamState.Disconnected;
+
+		public bool HasFailed { get; set; }
+
+		public int? Width => null;
+
+		public int? Height => null;
+
+		public byte[]? CurrentFrame => null;
+
+		public event EventHandler? StateChanged
+		{
+			add { }
+			remove { }
+		}
+
+		public FrameSubscription Subscribe()
+		{
+			return new FrameSubscription(Channel.CreateBounded<byte[]>(1).Reader, () => { });
+		}
+
+		public Task RestartAsync()
+		{
+			return Task.CompletedTask;
+		}
+
+		public bool PrimeResult { get; set; } = true;
+
+		public Task<bool> PrimeAsync(TimeSpan timeout, CancellationToken cancellationToken)
+		{
+			return Task.FromResult(PrimeResult);
+		}
+
+		public ValueTask DisposeAsync()
+		{
+			return ValueTask.CompletedTask;
+		}
 	}
 
 	private sealed class StubEndpoint : IMjpegEndpoint

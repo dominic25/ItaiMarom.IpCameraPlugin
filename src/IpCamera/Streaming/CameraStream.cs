@@ -31,6 +31,7 @@ internal sealed class CameraStream : IFrameStream, IAsyncDisposable
 	private byte[]? _currentFrame;
 	private long _lastFrameTicks;
 	private VideoStreamState _state = VideoStreamState.Disconnected;
+	private bool _hasFailed;
 	private int? _width;
 	private int? _height;
 	private bool _disposed;
@@ -65,6 +66,17 @@ internal sealed class CameraStream : IFrameStream, IAsyncDisposable
 			lock (_gate)
 			{
 				return _width;
+			}
+		}
+	}
+
+	public bool HasFailed
+	{
+		get
+		{
+			lock (_gate)
+			{
+				return _hasFailed;
 			}
 		}
 	}
@@ -225,7 +237,7 @@ internal sealed class CameraStream : IFrameStream, IAsyncDisposable
 		}
 
 		run?.Dispose();
-		SetState(VideoStreamState.Disconnected);
+		SetIdle();
 	}
 
 	private async Task PumpAsync(CancellationToken cancellationToken)
@@ -254,7 +266,7 @@ internal sealed class CameraStream : IFrameStream, IAsyncDisposable
 			}
 			catch (Exception exception)
 			{
-				SetState(VideoStreamState.Disconnected);
+				SetFailed();
 				_logger.Warning("Camera frame source failed: {Reason}", exception.Message);
 			}
 
@@ -324,17 +336,153 @@ internal sealed class CameraStream : IFrameStream, IAsyncDisposable
 
 	private void SetState(VideoStreamState state)
 	{
+		bool changed;
+
 		lock (_gate)
 		{
-			if (_state == state)
-			{
-				return;
-			}
-
+			changed = _state != state;
 			_state = state;
+
+			if (state == VideoStreamState.Connected && _hasFailed)
+			{
+				_hasFailed = false;
+				changed = true;
+			}
 		}
 
-		StateChanged?.Invoke(this, EventArgs.Empty);
+		if (changed)
+		{
+			StateChanged?.Invoke(this, EventArgs.Empty);
+		}
+	}
+
+	private void SetFailed()
+	{
+		bool changed;
+
+		lock (_gate)
+		{
+			changed = !_hasFailed || _state != VideoStreamState.Disconnected;
+			_hasFailed = true;
+			_state = VideoStreamState.Disconnected;
+		}
+
+		if (changed)
+		{
+			StateChanged?.Invoke(this, EventArgs.Empty);
+		}
+	}
+
+	private void SetIdle()
+	{
+		bool changed;
+
+		lock (_gate)
+		{
+			changed = _hasFailed || _state != VideoStreamState.Disconnected;
+			_hasFailed = false;
+			_state = VideoStreamState.Disconnected;
+		}
+
+		if (changed)
+		{
+			StateChanged?.Invoke(this, EventArgs.Empty);
+		}
+	}
+
+	/// <summary>Drops the current source and starts a new one when somebody is still watching.</summary>
+	public async Task<bool> PrimeAsync(TimeSpan timeout, CancellationToken cancellationToken)
+	{
+		lock (_gate)
+		{
+			if (_currentFrame is not null)
+			{
+				return true;
+			}
+
+			ObjectDisposedException.ThrowIf(_disposed, this);
+			EnsureRunning();
+
+			// Nobody is subscribed yet; stop again if the viewer never opens the URL.
+			if (_subscribers.Count == 0)
+			{
+				ScheduleIdleStop();
+			}
+		}
+
+		var deadline = DateTime.UtcNow + timeout;
+
+		while (DateTime.UtcNow < deadline)
+		{
+			if (CurrentFrame is not null)
+			{
+				return true;
+			}
+
+			if (HasFailed)
+			{
+				return false;
+			}
+
+			try
+			{
+				await Task.Delay(100, cancellationToken).ConfigureAwait(false);
+			}
+			catch (OperationCanceledException)
+			{
+				return false;
+			}
+		}
+
+		return CurrentFrame is not null;
+	}
+
+	public async Task RestartAsync()
+	{
+		Task? pump;
+		CancellationTokenSource? run;
+		bool resume;
+
+		lock (_gate)
+		{
+			pump = _pump;
+			run = _run;
+			_pump = null;
+			_run = null;
+			_currentFrame = null;
+			_hasFailed = false;
+			resume = _subscribers.Count > 0 && !_disposed;
+		}
+
+		if (run is not null)
+		{
+			await run.CancelAsync().ConfigureAwait(false);
+		}
+
+		if (pump is not null)
+		{
+			try
+			{
+				await pump.ConfigureAwait(false);
+			}
+			catch (OperationCanceledException)
+			{
+			}
+		}
+
+		run?.Dispose();
+		SetIdle();
+
+		if (resume)
+		{
+			lock (_gate)
+			{
+				if (_subscribers.Count > 0 && !_disposed)
+				{
+					EnsureRunning();
+				}
+			}
+		}
 	}
 
 	public async ValueTask DisposeAsync()

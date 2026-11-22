@@ -7,16 +7,14 @@ namespace IpCamera.Cameras;
 /// The cameras of the current configuration and the live pipeline of each. Replacing the camera list keeps
 /// the pipelines whose settings did not change, so an edit of one camera does not interrupt the others.
 /// </summary>
-internal sealed class CameraRegistry(
-	Func<CameraDefinition, IFrameSource> sourceFactory,
-	ILogger logger) : IAsyncDisposable
+internal sealed class CameraRegistry(Func<CameraDefinition, IFrameStream> streamFactory) : IAsyncDisposable
 {
 	private readonly object _gate = new();
-	private readonly Dictionary<string, CameraStream> _streams = new(StringComparer.Ordinal);
+	private readonly Dictionary<string, IFrameStream> _streams = new(StringComparer.Ordinal);
 	private IReadOnlyList<CameraDefinition> _cameras = [];
 	private bool _disposed;
 
-	public event Action<CameraStream>? StreamChanged;
+	public event Action<IFrameStream>? StreamChanged;
 
 	public IReadOnlyList<CameraDefinition> Cameras
 	{
@@ -29,7 +27,7 @@ internal sealed class CameraRegistry(
 		}
 	}
 
-	public CameraStream? Find(string cameraId)
+	public IFrameStream? Find(string cameraId)
 	{
 		lock (_gate)
 		{
@@ -39,8 +37,8 @@ internal sealed class CameraRegistry(
 
 	public async Task SetCamerasAsync(IReadOnlyList<CameraDefinition> cameras, CancellationToken cancellationToken)
 	{
-		List<CameraStream> removed = [];
-		var added = new List<CameraStream>();
+		List<IFrameStream> removed = [];
+		var added = new List<IFrameStream>();
 
 		lock (_gate)
 		{
@@ -54,7 +52,7 @@ internal sealed class CameraRegistry(
 				}
 			}
 
-			var next = new Dictionary<string, CameraStream>(cameras.Count, StringComparer.Ordinal);
+			var next = new Dictionary<string, IFrameStream>(cameras.Count, StringComparer.Ordinal);
 			foreach (var camera in cameras)
 			{
 				if (_streams.TryGetValue(camera.Id, out var existing) && camera == existing.Definition)
@@ -63,7 +61,7 @@ internal sealed class CameraRegistry(
 					continue;
 				}
 
-				var stream = new CameraStream(camera, sourceFactory, logger);
+				var stream = streamFactory(camera);
 				stream.StateChanged += (_, _) => StreamChanged?.Invoke(stream);
 				next[camera.Id] = stream;
 				added.Add(stream);
@@ -93,7 +91,7 @@ internal sealed class CameraRegistry(
 
 	public async ValueTask DisposeAsync()
 	{
-		CameraStream[] streams;
+		IFrameStream[] streams;
 
 		lock (_gate)
 		{

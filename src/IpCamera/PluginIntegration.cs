@@ -1,3 +1,4 @@
+using IpCamera.Actions;
 using IpCamera.Cameras;
 using IpCamera.ConfigFlow;
 using IpCamera.Streaming;
@@ -30,6 +31,7 @@ internal sealed class PluginIntegration : IPluginIntegration,
 	IIntegrationIssueProvider
 {
 	private const string FfmpegIssueId = "ffmpeg-missing";
+	private const string CameraIssuePrefix = "camera-offline-";
 
 	private readonly ILogger _logger;
 	private readonly CameraRegistry _registry;
@@ -39,10 +41,10 @@ internal sealed class PluginIntegration : IPluginIntegration,
 
 	private CameraStreamProvider? _provider;
 	private string? _providerQualifiedId;
+	private IIntegrationContext? _context;
 	private string? _widgetTypeId;
 	private IReadOnlyList<WidgetTypeDescriptor> _widgetTypes = [];
-	private IReadOnlyList<IntegrationIssue> _issues = [];
-
+	private bool _ffmpegIssue;
 	internal PluginIntegration(
 		CameraRegistry registry,
 		MjpegServer server,
@@ -55,15 +57,17 @@ internal sealed class PluginIntegration : IPluginIntegration,
 		_ffmpeg = ffmpeg;
 		_probe = probe;
 		_logger = logger.ForContext<PluginIntegration>();
+		Actions = [new ShowCameraAction(() => _context?.Widgets, _logger)];
 	}
 
-	public IReadOnlyList<IActionDefinition> Actions => [];
+	public IReadOnlyList<IActionDefinition> Actions { get; }
 
 	public IReadOnlyList<UiSurfaceDeclaration> Surfaces { get; } =
 	[
 		new() { Kind = UiSurfaceKinds.Widget, SessionMode = UiSessionModes.Shared },
 		new() { Kind = UiSurfaceKinds.Preview, SessionMode = UiSessionModes.Shared },
-		new() { Kind = UiSurfaceKinds.Config, SessionMode = UiSessionModes.Exclusive }
+		new() { Kind = UiSurfaceKinds.Config, SessionMode = UiSessionModes.Exclusive },
+		new() { Kind = UiSurfaceKinds.Dialog, SessionMode = UiSessionModes.Exclusive }
 	];
 
 	IConfigFlow IConfigFlowProvider.CreateConfigFlow()
@@ -73,13 +77,12 @@ internal sealed class PluginIntegration : IPluginIntegration,
 
 	public async Task InitializeAsync(IIntegrationContext context)
 	{
+		_context = context;
 		var cameras = await ReadCamerasAsync(context).ConfigureAwait(false);
 		await _registry.SetCamerasAsync(cameras, CancellationToken.None).ConfigureAwait(false);
 		await _server.StartAsync(CancellationToken.None).ConfigureAwait(false);
 
-		_issues = cameras.Any(camera => camera.NeedsFfmpeg) && !_ffmpeg.IsAvailable
-			? [FfmpegIssue()]
-			: [];
+		_ffmpegIssue = cameras.Any(camera => camera.NeedsFfmpeg) && !_ffmpeg.IsAvailable;
 
 		_logger.Information("Loaded {CameraCount} camera(s).", cameras.Count);
 	}
@@ -125,12 +128,19 @@ internal sealed class PluginIntegration : IPluginIntegration,
 	{
 		cancellationToken.ThrowIfCancellationRequested();
 
+		var surface = request.Surface;
+
+		if (surface.Kind == UiSurfaceKinds.Dialog &&
+			surface.Attributes.TryGetValue(UiDialogSurfaceAttributes.ViewId, out var viewId) &&
+			viewId.GetString() == ShowCameraAction.ModalViewId)
+		{
+			return Create(surface, CameraWidget.BuildModal(surface, _providerQualifiedId));
+		}
+
 		if (_widgetTypeId is null)
 		{
 			return Task.FromResult<IUiSession?>(null);
 		}
-
-		var surface = request.Surface;
 
 		if (UiWidgetSurface.IsConfigurationFor(surface, _widgetTypeId))
 		{
@@ -148,16 +158,41 @@ internal sealed class PluginIntegration : IPluginIntegration,
 	public Task<IReadOnlyList<IntegrationIssue>> GetIssuesAsync(CancellationToken cancellationToken = default)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
-		return Task.FromResult(_issues);
+
+		var issues = new List<IntegrationIssue>();
+
+		if (_ffmpegIssue)
+		{
+			issues.Add(FfmpegIssue());
+		}
+
+		foreach (var camera in _registry.Cameras)
+		{
+			if (_registry.Find(camera.Id) is { HasFailed: true, State: not VideoStreamState.Connected })
+			{
+				issues.Add(CameraIssue(camera));
+			}
+		}
+
+		return Task.FromResult<IReadOnlyList<IntegrationIssue>>(issues);
 	}
 
-	public Task<IssueResolution> ResolveIssueAsync(string issueId, CancellationToken cancellationToken = default)
+	public async Task<IssueResolution> ResolveIssueAsync(
+		string issueId,
+		CancellationToken cancellationToken = default)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
 
-		return Task.FromResult(issueId == FfmpegIssueId
+		if (issueId.StartsWith(CameraIssuePrefix, StringComparison.Ordinal) &&
+			_registry.Find(issueId[CameraIssuePrefix.Length..]) is { } stream)
+		{
+			await stream.RestartAsync().ConfigureAwait(false);
+			return IssueResolution.Ok(Strings.Issues.CameraOffline.Retrying());
+		}
+
+		return issueId == FfmpegIssueId
 			? IssueResolution.Failed(Strings.Issues.FfmpegMissing.StillMissing())
-			: IssueResolution.Failed());
+			: IssueResolution.Failed();
 	}
 
 	public async Task ShutdownAsync()
@@ -194,6 +229,18 @@ internal sealed class PluginIntegration : IPluginIntegration,
 			Description = Strings.Issues.FfmpegMissing.Description(),
 			Severity = IntegrationIssueSeverity.Warning,
 			HelpUrl = new Uri("https://ffmpeg.org/download.html")
+		};
+	}
+
+	private static IntegrationIssue CameraIssue(CameraDefinition camera)
+	{
+		return new IntegrationIssue
+		{
+			Id = CameraIssuePrefix + camera.Id,
+			Title = Strings.Issues.CameraOffline.Title(),
+			Description = Strings.Issues.CameraOffline.Description(camera.Name),
+			Severity = IntegrationIssueSeverity.Warning,
+			ActionLabel = Strings.Issues.CameraOffline.Retry()
 		};
 	}
 

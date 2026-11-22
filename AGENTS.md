@@ -21,6 +21,7 @@ src/IpCamera/
   VideoStreams/              the video stream provider and its state notifications
   Widgets/                   camera widget view, configuration, UI session adapter
   ConfigFlow/                the camera setup flow
+  Actions/                   the full-screen camera action
   Localization/Strings.resx  every user-facing string
   Assets/icon.svg            the icon the manifest declares
 tests/IpCamera.Tests/        unit tests, the harness integration tests and one local end-to-end test

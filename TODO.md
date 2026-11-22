@@ -5,34 +5,34 @@ scope, the last three are larger and can wait.
 
 ## 1.1.0
 
-- [ ] **Connection test in the camera setup**
+- [x] **Connection test in the camera setup**
   Fetch one frame when the camera entry is submitted and explain a failure precisely: unreachable host,
   401/403, a response that is not JPEG or multipart, or a go2rtc stream that still offers H.265 only.
   Show the reason on the URL field instead of saving a camera that can never produce a picture.
   Cover the check with a fake `HttpMessageHandler` for the reachable and each failure case.
   Decide whether a timeout blocks saving or only warns, since a camera can be temporarily offline.
 
-- [ ] **Tap to enlarge**
+- [x] **Tap to enlarge**
   A short press opens a modal with the same stream at full size, with a close control and the same fit
   mode. Add `SupportsFlows` so a user's own Short Press flow wins over the default, and allow `flows` in
   the widget data schema. Test the modal session and the flow priority.
 
-- [ ] **Offline and state feedback**
+- [x] **Offline and state feedback**
   When a producer fails, call `UpdateSessionAsync` with `Reconnecting` and a localized message so the
   widget reads "Camera offline, retrying" instead of showing a frozen frame. After repeated failures,
   report an integration issue per camera with a retry action. Clear both when frames return.
 
-- [ ] **Pre-warm on open**
+- [x] **Pre-warm on open**
   Start the source in `OpenAsync` and return once the first frame exists, with a timeout below the
   capability invoke timeout. Removes the empty first response from go2rtc and the few seconds of
   "Connecting" after a reconnect. On timeout, refuse with `StreamUnavailable` and a logged reason.
 
-- [ ] **Standard widget appearance**
+- [x] **Standard widget appearance**
   Declare `AppearanceProperties` for background, label, label colour, font and accent, read them with
   `UiWidgetAppearance.Read`, and draw a label overlay over the video. Add the standard appearance
   section to the widget configuration and allow the keys in the data schema.
 
-- [ ] **Pan the picture in Fill mode, with a preview**
+- [x] **Pan the picture in Fill mode, with a preview**
   When Fit is Fill, offer horizontal and vertical position controls, and optionally zoom, so the user
   can choose which part of the cropped picture is visible. `UiVideoStream` has no offset of its own, so
   wrap it in a `UiTransform` and let the tile's clipping crop the moved picture. The live widget preview

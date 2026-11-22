@@ -1,12 +1,18 @@
 using System.Threading.Channels;
+using IpCamera.Cameras;
 using MacroDeck.Sdk.VideoStreams;
 
 namespace IpCamera.Streaming;
 
 /// <summary>One camera's live frame pipeline, as the MJPEG server and the video stream provider see it.</summary>
-internal interface IFrameStream
+internal interface IFrameStream : IAsyncDisposable
 {
+	CameraDefinition Definition { get; }
+
 	VideoStreamState State { get; }
+
+	/// <summary>Whether the source failed since it last delivered a frame.</summary>
+	bool HasFailed { get; }
 
 	int? Width { get; }
 
@@ -18,6 +24,12 @@ internal interface IFrameStream
 	event EventHandler? StateChanged;
 
 	FrameSubscription Subscribe();
+
+	/// <summary>Drops the current source and starts a new one when somebody is still watching.</summary>
+	Task RestartAsync();
+
+	/// <summary>Starts the source and waits for a first frame, so the first viewer gets a picture at once.</summary>
+	Task<bool> PrimeAsync(TimeSpan timeout, CancellationToken cancellationToken);
 }
 
 /// <summary>A consumer's view of a stream: a bounded channel that drops its oldest frame rather than
