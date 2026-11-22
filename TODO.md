@@ -68,10 +68,14 @@ scope, the last three are larger and can wait.
   by `store/validate.ps1`, plus `store/listing.md` with the Store copy. The README uses the hero image
   and a screenshot table. The camera scenes are mockups, not real footage.
 
-- [ ] **Publishing**
-  Add the GitHub repository and matching publisher to `manifest.json`, add the Store badge to the
-  README, push the repository, run the CI and release workflows, and submit through the Creator Portal.
-  Until then the plugin is installed from a local `.macroDeckPlugin` file.
+- [x] **GitHub repository and Store metadata**
+  Public repository at https://github.com/dominic25/ItaiMarom.IpCameraPlugin, set in the manifest, with
+  the Store badge in the README and the listing copy under `store/`. The publication check is clean.
+
+- [ ] **Store release and submission**
+  In the Creator Portal, create the project with the id `com.itaimarom.ip-camera`, connect the repository
+  and publish a GitHub release so the workflow builds the package. Then add that build to a submission,
+  declare any AI use, and submit it for review.
 
 ## Future
 
