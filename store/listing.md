@@ -69,6 +69,6 @@ camera, ip camera, rtsp, mjpeg, onvif, xiaomi, go2rtc, security camera, live vie
 
 ## Links
 
-- Repository: not set yet
+- Repository: https://github.com/dominic25/ItaiMarom.IpCameraPlugin
 - Support: the repository issue tracker once it exists
 - Store: https://macro-deck.app/store/com.itaimarom.ip-camera
