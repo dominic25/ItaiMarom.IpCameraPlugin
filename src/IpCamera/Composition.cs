@@ -20,6 +20,9 @@ internal static class Composition
 
 		builder.Services.AddSingleton<FfmpegLocator>();
 		builder.Services.AddSingleton<CameraSourceFactory>();
+		builder.Services.AddSingleton<ICameraProbe>(services => new CameraProbe(
+			services.GetRequiredService<IHttpClientFactory>(),
+			services.GetRequiredService<ILogger>()));
 		builder.Services.AddSingleton(services => new CameraRegistry(
 			services.GetRequiredService<CameraSourceFactory>().Create,
 			services.GetRequiredService<ILogger>()));
@@ -31,6 +34,7 @@ internal static class Composition
 			services.GetRequiredService<CameraRegistry>(),
 			services.GetRequiredService<MjpegServer>(),
 			services.GetRequiredService<FfmpegLocator>(),
+			services.GetRequiredService<ICameraProbe>(),
 			services.GetRequiredService<ILogger>()));
 	}
 }

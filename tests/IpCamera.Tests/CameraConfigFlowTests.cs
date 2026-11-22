@@ -22,7 +22,7 @@ public sealed class CameraConfigFlowTests
 	[Test]
 	public async Task A_complete_snapshot_camera_is_saved_as_one_entry()
 	{
-		var flow = new CameraConfigFlow(new FfmpegLocator(null), _logger);
+		var flow = CreateFlow();
 
 		var result = await flow.SubmitAsync("camera", Input(
 			("name", "Front door"),
@@ -38,7 +38,7 @@ public sealed class CameraConfigFlowTests
 	[Test]
 	public async Task A_name_is_required()
 	{
-		var flow = new CameraConfigFlow(new FfmpegLocator(null), _logger);
+		var flow = CreateFlow();
 
 		var result = await flow.SubmitAsync("camera", Input(
 			("name", "  "),
@@ -52,7 +52,7 @@ public sealed class CameraConfigFlowTests
 	[Test]
 	public async Task A_url_with_the_wrong_scheme_is_rejected()
 	{
-		var flow = new CameraConfigFlow(new FfmpegLocator(null), _logger);
+		var flow = CreateFlow();
 
 		var result = await flow.SubmitAsync("camera", Input(
 			("name", "Garden"),
@@ -66,7 +66,7 @@ public sealed class CameraConfigFlowTests
 	[Test]
 	public async Task An_rtsp_camera_is_refused_without_ffmpeg()
 	{
-		var flow = new CameraConfigFlow(new FfmpegLocator(null), _logger);
+		var flow = CreateFlow();
 
 		var result = await flow.SubmitAsync("camera", Input(
 			("name", "Garden"),
@@ -84,7 +84,7 @@ public sealed class CameraConfigFlowTests
 		var executable = Path.GetTempFileName();
 		try
 		{
-			var flow = new CameraConfigFlow(new FfmpegLocator(executable), _logger);
+			var flow = CreateFlow(new FfmpegLocator(executable));
 
 			var result = await flow.SubmitAsync("camera", Input(
 				("name", "Garden"),
@@ -101,9 +101,41 @@ public sealed class CameraConfigFlowTests
 		}
 	}
 
+	[Test]
+	public async Task A_probe_failure_is_reported_on_the_url_field()
+	{
+		var flow = CreateFlow(probeResult: new CameraProbeResult(CameraProbeFailure.NoFrame));
+
+		var result = await flow.SubmitAsync("camera", Input(
+			("name", "Garden"),
+			("kind", "mjpeg"),
+			("url", "http://192.168.1.30/video.mjpg")), new StubFlowContext(), CancellationToken.None);
+
+		Assert.That(result.Kind, Is.EqualTo(ConfigFlowResultKind.Error));
+		Assert.That(result.FieldErrors, Does.ContainKey("url"));
+	}
+
+	private static CameraConfigFlow CreateFlow(
+		FfmpegLocator? ffmpeg = null,
+		CameraProbeResult? probeResult = null)
+	{
+		return new CameraConfigFlow(
+			ffmpeg ?? new FfmpegLocator(null),
+			new StubProbe(probeResult ?? CameraProbeResult.Success),
+			_logger);
+	}
+
 	private static Dictionary<string, object?> Input(params (string Key, object? Value)[] pairs)
 	{
 		return pairs.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
+	}
+
+	private sealed class StubProbe(CameraProbeResult result) : ICameraProbe
+	{
+		public Task<CameraProbeResult> ProbeAsync(CameraDefinition camera, CancellationToken cancellationToken)
+		{
+			return Task.FromResult(result);
+		}
 	}
 
 	private sealed class StubFlowContext : IConfigFlowContext

@@ -35,6 +35,7 @@ internal sealed class PluginIntegration : IPluginIntegration,
 	private readonly CameraRegistry _registry;
 	private readonly MjpegServer _server;
 	private readonly FfmpegLocator _ffmpeg;
+	private readonly ICameraProbe _probe;
 
 	private CameraStreamProvider? _provider;
 	private string? _providerQualifiedId;
@@ -46,11 +47,13 @@ internal sealed class PluginIntegration : IPluginIntegration,
 		CameraRegistry registry,
 		MjpegServer server,
 		FfmpegLocator ffmpeg,
+		ICameraProbe probe,
 		ILogger logger)
 	{
 		_registry = registry;
 		_server = server;
 		_ffmpeg = ffmpeg;
+		_probe = probe;
 		_logger = logger.ForContext<PluginIntegration>();
 	}
 
@@ -65,7 +68,7 @@ internal sealed class PluginIntegration : IPluginIntegration,
 
 	IConfigFlow IConfigFlowProvider.CreateConfigFlow()
 	{
-		return new CameraConfigFlow(_ffmpeg, _logger);
+		return new CameraConfigFlow(_ffmpeg, _probe, _logger);
 	}
 
 	public async Task InitializeAsync(IIntegrationContext context)

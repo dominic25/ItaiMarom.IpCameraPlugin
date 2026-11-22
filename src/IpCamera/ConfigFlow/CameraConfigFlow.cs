@@ -12,7 +12,10 @@ namespace IpCamera.ConfigFlow;
 /// Adds or edits one camera. Each completed flow becomes one config entry, and every entry becomes one
 /// live stream, which is why several cameras need no separate list screen.
 /// </summary>
-internal sealed class CameraConfigFlow(FfmpegLocator ffmpeg, ILogger logger) : IConfigFlow
+internal sealed class CameraConfigFlow(
+	FfmpegLocator ffmpeg,
+	ICameraProbe probe,
+	ILogger logger) : IConfigFlow
 {
 	private const string StepId = "camera";
 
@@ -22,7 +25,7 @@ internal sealed class CameraConfigFlow(FfmpegLocator ffmpeg, ILogger logger) : I
 		return Task.FromResult(ConfigFlowResult.Step(Step()));
 	}
 
-	public Task<ConfigFlowResult> SubmitAsync(
+	public async Task<ConfigFlowResult> SubmitAsync(
 		string stepId,
 		IReadOnlyDictionary<string, object?> input,
 		IConfigFlowContext context,
@@ -32,24 +35,24 @@ internal sealed class CameraConfigFlow(FfmpegLocator ffmpeg, ILogger logger) : I
 
 		if (stepId != StepId)
 		{
-			return Task.FromResult(ConfigFlowResult.Error(Step(), Strings.Setup.UnknownStep()));
+			return ConfigFlowResult.Error(Step(), Strings.Setup.UnknownStep());
 		}
 
 		var name = ReadString(input, "name")?.Trim() ?? string.Empty;
 		if (name.Length == 0)
 		{
-			return Task.FromResult(FieldError("name", Strings.Setup.NameRequired()));
+			return FieldError("name", Strings.Setup.NameRequired());
 		}
 
 		if (!CameraDefinition.TryReadKind(ReadString(input, "kind"), out var kind))
 		{
-			return Task.FromResult(FieldError("kind", Strings.Setup.KindRequired()));
+			return FieldError("kind", Strings.Setup.KindRequired());
 		}
 
 		var urlText = ReadString(input, "url")?.Trim() ?? string.Empty;
 		if (!Uri.TryCreate(urlText, UriKind.Absolute, out var url))
 		{
-			return Task.FromResult(FieldError("url", Strings.Setup.UrlInvalid()));
+			return FieldError("url", Strings.Setup.UrlInvalid());
 		}
 
 		var schemeFits = kind == CameraSourceKind.Rtsp
@@ -57,45 +60,86 @@ internal sealed class CameraConfigFlow(FfmpegLocator ffmpeg, ILogger logger) : I
 			: url.Scheme is "http" or "https";
 		if (!schemeFits)
 		{
-			return Task.FromResult(FieldError("url", Strings.Setup.UrlWrongScheme()));
+			return FieldError("url", Strings.Setup.UrlWrongScheme());
 		}
 
 		var fps = ReadNumber(input, CameraSettings.FpsKey, 5);
 		if (fps is < 1 or > 15)
 		{
-			return Task.FromResult(FieldError(CameraSettings.FpsKey, Strings.Setup.FpsRange()));
+			return FieldError(CameraSettings.FpsKey, Strings.Setup.FpsRange());
 		}
 
 		var maxWidth = ReadNumber(input, CameraSettings.MaxWidthKey, 640);
 		if (maxWidth is < 0 or > 3840)
 		{
-			return Task.FromResult(FieldError(CameraSettings.MaxWidthKey, Strings.Setup.WidthRange()));
+			return FieldError(CameraSettings.MaxWidthKey, Strings.Setup.WidthRange());
 		}
+
+		var username = ReadString(input, CameraSettings.UsernameKey)?.Trim();
+		var password = ReadString(input, CameraSettings.PasswordKey);
+		if (password == "$masked")
+		{
+			// The host keeps the stored secret and never sends it to the flow during an edit.
+			password = null;
+		}
+
+		var transport = ReadString(input, CameraSettings.RtspTransportKey) == "udp" ? "udp" : "tcp";
 
 		if (kind == CameraSourceKind.Rtsp && !ffmpeg.IsAvailable)
 		{
 			logger.Warning("An RTSP camera was configured but ffmpeg is not on the PATH.");
-			return Task.FromResult(ConfigFlowResult.Error(Step(), Strings.Setup.FfmpegMissing()));
+			return ConfigFlowResult.Error(Step(), Strings.Setup.FfmpegMissing());
+		}
+
+		var candidate = new CameraDefinition(
+			Guid.Empty.ToString("D"),
+			name,
+			kind,
+			url,
+			string.IsNullOrWhiteSpace(username) ? null : username,
+			string.IsNullOrWhiteSpace(password) ? null : password,
+			(int)Math.Round(fps),
+			(int)Math.Round(maxWidth),
+			transport);
+
+		// An edit with an untouched secret cannot be probed: the flow sees the mask, not the password.
+		if (string.IsNullOrEmpty(candidate.Username) || !string.IsNullOrEmpty(candidate.Password))
+		{
+			var probeResult = await probe.ProbeAsync(candidate, cancellationToken).ConfigureAwait(false);
+			if (!probeResult.Succeeded)
+			{
+				return FieldError(CameraSettings.UrlKey, ProbeMessage(probeResult.Failure));
+			}
 		}
 
 		var values = new Dictionary<string, ConfigFlowValue>
 		{
 			[CameraSettings.KindKey] = ConfigFlowValue.Plain(CameraDefinition.ToWireValue(kind)),
 			[CameraSettings.UrlKey] = ConfigFlowValue.Plain(url.ToString()),
-			[CameraSettings.UsernameKey] = ConfigFlowValue.Plain(ReadString(input, CameraSettings.UsernameKey)?.Trim() ?? string.Empty),
+			[CameraSettings.UsernameKey] = ConfigFlowValue.Plain(username ?? string.Empty),
 			[CameraSettings.FpsKey] = ConfigFlowValue.Plain(fps.ToString(CultureInfo.InvariantCulture)),
 			[CameraSettings.MaxWidthKey] = ConfigFlowValue.Plain(maxWidth.ToString(CultureInfo.InvariantCulture)),
-			[CameraSettings.RtspTransportKey] =
-				ConfigFlowValue.Plain(ReadString(input, CameraSettings.RtspTransportKey) == "udp" ? "udp" : "tcp")
+			[CameraSettings.RtspTransportKey] = ConfigFlowValue.Plain(transport)
 		};
 
-		var password = ReadString(input, CameraSettings.PasswordKey);
-		if (!string.IsNullOrEmpty(password) && password != "$masked")
+		if (!string.IsNullOrEmpty(password))
 		{
 			values[CameraSettings.PasswordKey] = ConfigFlowValue.Secret(password);
 		}
 
-		return Task.FromResult(ConfigFlowResult.Complete(name, values));
+		return ConfigFlowResult.Complete(name, values);
+	}
+
+	private static LocalizedText ProbeMessage(CameraProbeFailure failure)
+	{
+		return failure switch
+		{
+			CameraProbeFailure.Unauthorized => Strings.Setup.Probe.Unauthorized(),
+			CameraProbeFailure.HttpError => Strings.Setup.Probe.HttpError(),
+			CameraProbeFailure.NotJpeg => Strings.Setup.Probe.NotJpeg(),
+			CameraProbeFailure.NoFrame => Strings.Setup.Probe.NoFrame(),
+			_ => Strings.Setup.Probe.Unreachable()
+		};
 	}
 
 	private static ConfigFlowResult FieldError(string field, LocalizedText message)
