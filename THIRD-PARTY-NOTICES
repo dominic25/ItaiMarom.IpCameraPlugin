@@ -1,0 +1,21 @@
+IP Camera
+Copyright (c) 2026 itaim
+
+This product includes software developed by Macro Deck and by the Serilog contributors.
+The components below are distributed under the Apache License 2.0. A copy of that license is at
+https://www.apache.org/licenses/LICENSE-2.0.
+
+MacroDeck.Localization, MacroDeck.Plugin.Hosting, MacroDeck.Plugin.Protocol,
+MacroDeck.Plugin.Serilog, MacroDeck.Sdk, MacroDeck.Ui, MacroDeck.Ui.Model
+  Copyright (c) Macro Deck
+  https://github.com/Macro-Deck-App/Macro-Deck
+
+Serilog, Serilog.Extensions.Hosting, Serilog.Extensions.Logging
+  Copyright (c) Serilog Contributors
+  https://github.com/serilog/serilog
+  https://github.com/serilog/serilog-extensions-hosting
+  https://github.com/serilog/serilog-extensions-logging
+
+ffmpeg is not included in this package. When ffmpeg is installed on the computer that runs Macro Deck,
+the plugin starts it to convert RTSP video. ffmpeg is distributed separately by the FFmpeg project
+under the GNU LGPL or GPL, see https://ffmpeg.org/legal.html.

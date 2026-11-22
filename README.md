@@ -186,5 +186,5 @@ workflow by publishing a GitHub release. The Store builds and signs the package 
 
 ## Licence
 
-MIT. See [LICENSE](LICENSE). ffmpeg is not bundled or redistributed; it is used from the host when it is
-installed.
+MIT. See [LICENSE](LICENSE), [NOTICE](NOTICE) and [THIRD-PARTY-NOTICES](THIRD-PARTY-NOTICES). ffmpeg
+is not bundled or redistributed; it is used from the host when it is installed.
