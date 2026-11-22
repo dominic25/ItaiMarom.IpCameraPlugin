@@ -64,6 +64,19 @@ items.
   keeping the current custom values. Show the resulting frame rate and width beside the preset and fall
   back to Custom when either is edited.
 
+- [ ] **Camera wall folder view**
+  Register an `IFolderViewProvider` that replaces a folder's widget grid with the plugin's own drawing,
+  so the folder can go edge to edge with no cell gaps, tile faces or per-widget chrome. Offer two views:
+  a camera wall with a chosen set of cameras in a configurable grid, and a single camera filling the
+  whole folder. Store the camera set, grid, Fill or Fit and labels per folder through the
+  `folder-view-config` entry point, keep the qualified view id stable, and declare the `folder` surface
+  as `Shared`. A stretched widget still lives inside the grid and is limited by it, so this is the way to
+  a real camera page. The user creates the folder and picks the view; the plugin never touches folders
+  or navigation, and Macro Deck keeps its own back button. Reuse the video stream provider, pre-warm and
+  appearance handling, run one session per cell, and test the view tree, the configuration round trip
+  and the conformance run. DoriDeck's piano-keyboard view is the only public reference implementation
+  today: https://github.com/Sarti2004/DoriDeck/blob/main/src/PianoFolder/PluginIntegration.cs
+
 ## Later
 
 - [ ] **Crop panning inside a filled frame** (blocked on Macro Deck)
@@ -72,16 +85,6 @@ items.
   movable crop rectangle needs `Zoom` and `OffsetX`/`OffsetY` on the video component itself, the way
   `UiButton` already frames artwork. Track that client capability, then restore the rectangle editor
   and its live preview.
-
-- [ ] **Full-screen camera folder view**
-  Register an `IFolderViewProvider` that draws one camera, or a grid of every camera, across the whole
-  folder. Unlike a widget stretched over several cells, a folder view replaces the folder's widget grid
-  entirely: the plugin controls the whole folder area, so it can go edge to edge, lay out a camera wall,
-  and ignore the per-cell gaps and tile faces. The user creates the folder and selects the view in the
-  folder settings; the plugin never manages folders or navigation. Offer a per-folder view with a camera
-  picker, Fill or Fit, and an optional label; reuse the existing video stream provider and the widget's
-  appearance handling. Add the folder-view configuration tree, the `folder` surface declaration, tests
-  and the conformance run.
 
 - [x] **ONVIF discovery**
   A setup step that runs WS-Discovery, lists cameras, and fills the snapshot or RTSP URL from the media
