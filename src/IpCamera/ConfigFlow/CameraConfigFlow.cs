@@ -31,30 +31,26 @@ internal sealed class CameraConfigFlow(
 	{
 		cancellationToken.ThrowIfCancellationRequested();
 
-		// Discovery runs only for a new camera. Editing an entry should open at once, and the field would
-		// only be confusing next to the values already stored.
-		var isNew = (context as IConfigFlowEntryContext)?.EntryTitle is null;
-		if (isNew)
+		// Discovery runs on every setup session, including an edit, so a camera that appears later is
+		// still offered. It costs a three second wait on a network with no ONVIF cameras.
+		try
 		{
-			try
-			{
-				var devices = await onvifDiscovery
-					.DiscoverAsync(TimeSpan.FromSeconds(3), cancellationToken)
-					.ConfigureAwait(false);
+			var devices = await onvifDiscovery
+				.DiscoverAsync(TimeSpan.FromSeconds(3), cancellationToken)
+				.ConfigureAwait(false);
 
-				foreach (var device in devices)
-				{
-					_onvifDevices[device.XAddr] = device;
-				}
-			}
-			catch (OperationCanceledException)
+			foreach (var device in devices)
 			{
-				throw;
+				_onvifDevices[device.XAddr] = device;
 			}
-			catch (Exception exception) when (exception is not OutOfMemoryException)
-			{
-				logger.Debug("ONVIF discovery failed: {Reason}", exception.Message);
-			}
+		}
+		catch (OperationCanceledException)
+		{
+			throw;
+		}
+		catch (Exception exception) when (exception is not OutOfMemoryException)
+		{
+			logger.Debug("ONVIF discovery failed: {Reason}", exception.Message);
 		}
 
 		return ConfigFlowResult.Step(Step());

@@ -55,12 +55,13 @@ scope, the last three are larger and can wait.
   A setup step that runs WS-Discovery, lists cameras, and fills the snapshot or RTSP URL from the media
   profiles. Needs credentials handling per camera and a decision on how much ONVIF to support.
 
-- [ ] **Store identity and branding**
+- [x] **Store identity and branding**
   Keep "Macro Deck" out of the plugin name, package id, namespace, publisher and icon. The Creator
   Guidelines treat those as identity, and a platform name there implies an official product. Keep
   `IP Camera`, `com.itaim.ip-camera` and publisher `itaim`, with a generic camera icon. Use "Macro
   Deck" only in the description and README, as a statement of compatibility, and check the Store
-  title, screenshots and icon against the naming and branding rules before submitting.
+  title, screenshots and icon against the naming and branding rules before submitting. The manifest,
+  id, publisher and icon are already compliant; the final Store listing check happens with Publishing.
 
 - [ ] **Publishing**
   Add the GitHub repository and matching publisher to `manifest.json`, add the Store badge to the
