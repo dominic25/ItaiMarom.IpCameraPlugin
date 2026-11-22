@@ -42,17 +42,6 @@ scope, the last three are larger and can wait.
   `UiButton` already frames artwork. Track that client capability, then restore the rectangle editor
   and its live preview.
 
-- [ ] **Pan and tilt control**
-  The Mi 360 moves with Xiaomi's encrypted motor command (`cmdMotorReq` 0x112, operations 1 left,
-  2 right, 3 up, 4 down) over the same P2P session go2rtc already holds. go2rtc has an open pull
-  request for this (AlexxIT/go2rtc #2531) that adds `POST /api/xiaomi/motor?src=<stream>&operation=<1-4>`
-  and ONVIF PTZ, but it is not merged. Decide between building that branch for the server and adding a
-  "Move camera" action with left, right, up and down, or leaving Xiaomi PTZ to Home Assistant's
-  `xiaomi_camera_native` integration and calling its buttons. Store the go2rtc control stream on the
-  camera entry, since the MJPEG stream is the transcoded `_mjpeg` one. Test physical movement on
-  `chuangmi.camera.ipc019`, which is not in that project's verified model list. ONVIF PTZ belongs with
-  the ONVIF discovery item for cameras that support it.
-
 - [ ] **ONVIF discovery**
   A setup step that runs WS-Discovery, lists cameras, and fills the snapshot or RTSP URL from the media
   profiles. Needs credentials handling per camera and a decision on how much ONVIF to support.
@@ -73,3 +62,25 @@ scope, the last three are larger and can wait.
   Add the GitHub repository and matching publisher to `manifest.json`, add the Store badge to the
   README, push the repository, run the CI and release workflows, and submit through the Creator Portal.
   Until then the plugin is installed from a local `.macroDeckPlugin` file.
+
+## Future
+
+- [ ] **Camera controls**
+  Add optional per-camera control, starting with pan and tilt:
+
+  - **Xiaomi PTZ.** The Mi 360 moves with the encrypted motor command (`cmdMotorReq` 0x112, operations
+    1 left, 2 right, 3 up, 4 down) over the P2P session go2rtc already holds. go2rtc has an open pull
+    request (#2531) exposing `POST /api/xiaomi/motor?src=<stream>&operation=<1-4>`; it is not merged.
+    Build that branch for the server or wait for it, store the go2rtc control stream on the camera
+    entry (it is `mi360`, not the transcoded `mi360_mjpeg`), and test physical movement on
+    `chuangmi.camera.ipc019`, which is not in the verified model list of the related project.
+  - **ONVIF PTZ.** Use ContinuousMove and Stop for cameras that expose ONVIF, sharing the connection
+    code with ONVIF discovery.
+  - **Other Xiaomi controls.** The camera's MIoT spec exposes night vision, wide dynamic range,
+    glimmer full colour, recording mode and a read-only motion tracking flag. Those need a Xiaomi
+    cloud or local miIO path with a stored device token, separate from the video session.
+
+  Shape it as actions (Move left, right, up, down, Night vision on/off, Recording mode) and optionally
+  a d-pad widget. Keep every control opt-in, store credentials as secrets, and make the plugin work
+  unchanged for cameras that only stream. Decide whether to rely on go2rtc and Home Assistant or to
+  implement the protocol inside the plugin before writing any of it.
