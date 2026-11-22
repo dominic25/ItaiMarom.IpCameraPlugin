@@ -44,19 +44,16 @@ scope, the last three are larger and can wait.
 
 - [ ] **Full-screen camera folder view**
   Register an `IFolderViewProvider` that draws one camera, or a grid of every camera, across the whole
-  folder. That is the closest a deck gets to full screen and it avoids the fixed modal box entirely.
-  Offer a per-folder view with a camera picker, Fill or Fit, and an optional label; reuse the existing
-  video stream provider and the widget's appearance handling. Add the folder-view configuration tree,
-  the `folder` surface declaration, tests and the conformance run.
+  folder. The plugin only provides the view type; the user creates the folder and selects the view in
+  the folder settings, and the plugin never manages folders or navigation. That is the closest a deck
+  gets to full screen and it avoids the fixed modal box entirely. Offer a per-folder view with a camera
+  picker, Fill or Fit, and an optional label; reuse the existing video stream provider and the widget's
+  appearance handling. Add the folder-view configuration tree, the `folder` surface declaration, tests
+  and the conformance run.
 
 - [ ] **ONVIF discovery**
   A setup step that runs WS-Discovery, lists cameras, and fills the snapshot or RTSP URL from the media
   profiles. Needs credentials handling per camera and a decision on how much ONVIF to support.
-
-- [ ] **HLS transport**
-  Serve HLS alongside MJPEG, offering it first on clients that play it natively. Requires an ffmpeg HLS
-  packager, a loopback segment server, cleanup, and the same session lifecycle as the MJPEG relay.
-  Only worth it for smoother playback on iPhones; MJPEG works everywhere.
 
 - [ ] **Store identity and branding**
   Keep "Macro Deck" out of the plugin name, package id, namespace, publisher and icon. The Creator
@@ -71,6 +68,11 @@ scope, the last three are larger and can wait.
   Until then the plugin is installed from a local `.macroDeckPlugin` file.
 
 ## Future
+
+- [ ] **HLS transport**
+  Serve HLS alongside MJPEG, offering it first on clients that play it natively. Requires an ffmpeg HLS
+  packager, a loopback segment server, cleanup, and the same session lifecycle as the MJPEG relay.
+  Only worth it for smoother playback on iPhones; MJPEG works everywhere.
 
 - [ ] **Camera controls**
   Add optional per-camera control, starting with pan and tilt:
