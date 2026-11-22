@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- The default-language file. Every translation is checked against it and the fallback chain ends
+       here, so it is required even for a plugin that ships one language. Add a language by adding
+       Localization/Strings.<culture>.resx beside it (Strings.de.resx, Strings.pt-BR.resx).
+       A dotted key becomes a nested class: Setup.Name is Strings.Setup.Name(). -->
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="VideoStreams.Provider.Name" xml:space="preserve">
+    <value>IP cameras</value>
+  </data>
+  <data name="VideoStreams.Kinds.Snapshot" xml:space="preserve">
+    <value>HTTP snapshot</value>
+  </data>
+  <data name="VideoStreams.Kinds.Mjpeg" xml:space="preserve">
+    <value>HTTP MJPEG</value>
+  </data>
+  <data name="VideoStreams.Kinds.Rtsp" xml:space="preserve">
+    <value>RTSP</value>
+  </data>
+  <data name="Widgets.Camera.Name" xml:space="preserve">
+    <value>Camera</value>
+  </data>
+  <data name="Widgets.Camera.Description" xml:space="preserve">
+    <value>Shows one of your IP cameras live.</value>
+  </data>
+  <data name="Widgets.Camera.NotConfigured" xml:space="preserve">
+    <value>Choose a camera in the widget settings</value>
+  </data>
+  <data name="Widgets.Camera.UpdateRequired" xml:space="preserve">
+    <value>Update Macro Deck to see this stream</value>
+  </data>
+  <data name="Widgets.Camera.Config.Camera" xml:space="preserve">
+    <value>Camera</value>
+  </data>
+  <data name="Widgets.Camera.Config.CameraDescription" xml:space="preserve">
+    <value>A camera added on the IP Camera integration page.</value>
+  </data>
+  <data name="Widgets.Camera.Config.Fit" xml:space="preserve">
+    <value>Picture size</value>
+  </data>
+  <data name="Widgets.Camera.Config.FitCover" xml:space="preserve">
+    <value>Fill</value>
+  </data>
+  <data name="Widgets.Camera.Config.FitContain" xml:space="preserve">
+    <value>Fit</value>
+  </data>
+  <data name="Setup.Title" xml:space="preserve">
+    <value>Add camera</value>
+  </data>
+  <data name="Setup.Description" xml:space="preserve">
+    <value>Every camera you add becomes a video stream and a widget source.</value>
+  </data>
+  <data name="Setup.Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Setup.Kind" xml:space="preserve">
+    <value>Source type</value>
+  </data>
+  <data name="Setup.KindSnapshot" xml:space="preserve">
+    <value>HTTP snapshot (JPEG)</value>
+  </data>
+  <data name="Setup.KindMjpeg" xml:space="preserve">
+    <value>HTTP MJPEG</value>
+  </data>
+  <data name="Setup.KindRtsp" xml:space="preserve">
+    <value>RTSP (needs ffmpeg)</value>
+  </data>
+  <data name="Setup.Url" xml:space="preserve">
+    <value>Stream URL</value>
+  </data>
+  <data name="Setup.UrlDescription" xml:space="preserve">
+    <value>The camera's snapshot, MJPEG or RTSP address. The Mi 360 1080p exposes RTSP after a community firmware hack, and go2rtc can serve it as MJPEG instead.</value>
+  </data>
+  <data name="Setup.Username" xml:space="preserve">
+    <value>Username</value>
+  </data>
+  <data name="Setup.UsernameDescription" xml:space="preserve">
+    <value>Only for HTTP basic authentication.</value>
+  </data>
+  <data name="Setup.Password" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="Setup.PasswordDescription" xml:space="preserve">
+    <value>Stored encrypted in Macro Deck.</value>
+  </data>
+  <data name="Setup.Fps" xml:space="preserve">
+    <value>Frames per second</value>
+  </data>
+  <data name="Setup.FpsDescription" xml:space="preserve">
+    <value>How often the camera is read. 5 is smooth enough for a tile and keeps the camera load low.</value>
+  </data>
+  <data name="Setup.MaxWidth" xml:space="preserve">
+    <value>Maximum width</value>
+  </data>
+  <data name="Setup.MaxWidthDescription" xml:space="preserve">
+    <value>Frames are scaled down to this width. 0 keeps the camera's own size.</value>
+  </data>
+  <data name="Setup.RtspTransport" xml:space="preserve">
+    <value>RTSP transport</value>
+  </data>
+  <data name="Setup.TransportTcp" xml:space="preserve">
+    <value>TCP (recommended)</value>
+  </data>
+  <data name="Setup.TransportUdp" xml:space="preserve">
+    <value>UDP</value>
+  </data>
+  <data name="Setup.NameRequired" xml:space="preserve">
+    <value>Enter a name for the camera.</value>
+  </data>
+  <data name="Setup.KindRequired" xml:space="preserve">
+    <value>Choose a source type.</value>
+  </data>
+  <data name="Setup.UrlInvalid" xml:space="preserve">
+    <value>Enter an absolute URL.</value>
+  </data>
+  <data name="Setup.UrlWrongScheme" xml:space="preserve">
+    <value>Use an http(s) URL for a snapshot or MJPEG camera, or an rtsp URL for an RTSP camera.</value>
+  </data>
+  <data name="Setup.FpsRange" xml:space="preserve">
+    <value>Use a frame rate between 1 and 15.</value>
+  </data>
+  <data name="Setup.WidthRange" xml:space="preserve">
+    <value>Use a width between 0 and 3840.</value>
+  </data>
+  <data name="Setup.FfmpegMissing" xml:space="preserve">
+    <value>RTSP needs ffmpeg on this computer. Install it, add it to the PATH, then try again.</value>
+  </data>
+  <data name="Setup.UnknownStep" xml:space="preserve">
+    <value>This setup step is no longer available. Close the dialog and start again.</value>
+  </data>
+  <data name="Issues.FfmpegMissing.Title" xml:space="preserve">
+    <value>ffmpeg is not installed</value>
+  </data>
+  <data name="Issues.FfmpegMissing.Description" xml:space="preserve">
+    <value>At least one camera uses RTSP, which this plugin converts with ffmpeg. Install ffmpeg and add it to the PATH, or set IPCAM_FFMPEG_PATH to the executable.</value>
+  </data>
+  <data name="Issues.FfmpegMissing.StillMissing" xml:space="preserve">
+    <value>ffmpeg is still not available.</value>
+  </data>
+</root>
