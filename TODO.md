@@ -1,7 +1,8 @@
 # Roadmap
 
-Planned work for the IP Camera plugin. Items are ordered by value; the first five are the intended 1.1.0
-scope, the last three are larger and can wait.
+Planned work for the IP Camera plugin. The 1.1.0 scope is done. **Next** holds the selected feature
+ideas, **Later** holds release work and lower-priority capabilities, and **Future** holds the larger
+items.
 
 ## 1.1.0
 
@@ -33,6 +34,36 @@ scope, the last three are larger and can wait.
   `UiWidgetAppearance.Read`, and draw a label overlay over the video. Add the standard appearance
   section to the widget configuration and allow the keys in the data schema.
 
+## Next
+
+- [ ] **Multi-camera widget**
+  Add a grid layout to the camera widget, with two or four cells and a camera picker per cell. Each cell
+  is its own video stream session, so one tile can show a small camera wall. Reuse the camera picker,
+  the fit setting and the appearance handling; keep the single-camera layout as the default. Test the
+  four-cell tree, an empty cell, and the modal on a pressed cell.
+
+- [ ] **Camera health page**
+  Add an integration page that lists every camera with its state, source type, resolution, last frame
+  age, last error and a Test or Retry button. Use the `page` surface, a timer to refresh the table, and
+  the registry's cached state. This gives one place to see why a camera is not playing without opening
+  its widget.
+
+- [ ] **Status overlay**
+  Draw a small live indicator and the last frame age on the camera tile, and a clear reconnecting state
+  instead of a frozen picture. Expose `LastFrameAt` on the stream registry, update a `UiState` once per
+  second while the session is open, and make the overlay optional in the widget settings.
+
+- [ ] **Save snapshot action**
+  Add an action that writes the current frame as a JPEG. The folder is configurable, with a default
+  under the user's Pictures folder and optionally a per-camera override. Use the camera name and a
+  timestamp for the file name, create the folder when missing, and return a failed result when there is
+  no frame. Prime the stream first if nobody is watching it.
+
+- [ ] **Stream quality presets**
+  Offer Low, Balanced and High presets per camera, mapping to a frame rate and maximum width, while
+  keeping the current custom values. Show the resulting frame rate and width beside the preset and fall
+  back to Custom when either is edited.
+
 ## Later
 
 - [ ] **Crop panning inside a filled frame** (blocked on Macro Deck)
@@ -44,9 +75,10 @@ scope, the last three are larger and can wait.
 
 - [ ] **Full-screen camera folder view**
   Register an `IFolderViewProvider` that draws one camera, or a grid of every camera, across the whole
-  folder. The plugin only provides the view type; the user creates the folder and selects the view in
-  the folder settings, and the plugin never manages folders or navigation. That is the closest a deck
-  gets to full screen and it avoids the fixed modal box entirely. Offer a per-folder view with a camera
+  folder. Unlike a widget stretched over several cells, a folder view replaces the folder's widget grid
+  entirely: the plugin controls the whole folder area, so it can go edge to edge, lay out a camera wall,
+  and ignore the per-cell gaps and tile faces. The user creates the folder and selects the view in the
+  folder settings; the plugin never manages folders or navigation. Offer a per-folder view with a camera
   picker, Fill or Fit, and an optional label; reuse the existing video stream provider and the widget's
   appearance handling. Add the folder-view configuration tree, the `folder` surface declaration, tests
   and the conformance run.
