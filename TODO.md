@@ -42,6 +42,13 @@ scope, the last three are larger and can wait.
   `UiButton` already frames artwork. Track that client capability, then restore the rectangle editor
   and its live preview.
 
+- [ ] **Full-screen camera folder view**
+  Register an `IFolderViewProvider` that draws one camera, or a grid of every camera, across the whole
+  folder. That is the closest a deck gets to full screen and it avoids the fixed modal box entirely.
+  Offer a per-folder view with a camera picker, Fill or Fit, and an optional label; reuse the existing
+  video stream provider and the widget's appearance handling. Add the folder-view configuration tree,
+  the `folder` surface declaration, tests and the conformance run.
+
 - [ ] **ONVIF discovery**
   A setup step that runs WS-Discovery, lists cameras, and fills the snapshot or RTSP URL from the media
   profiles. Needs credentials handling per camera and a decision on how much ONVIF to support.
