@@ -39,7 +39,7 @@
   "ai": {
     "interaction": false,
     "generatedContent": false,
-    "generatedAssets": false
+    "generatedAssets": true
   },
   "compatibility": {
     "macroDeck": ">=3.0.0-0"
