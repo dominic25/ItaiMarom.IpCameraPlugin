@@ -62,7 +62,7 @@ internal sealed class CameraStreamProvider : IVideoStreamProvider, IAsyncDisposa
 					stream?.Width,
 					stream?.Height,
 					HasAudio: false,
-					State: stream?.State ?? VideoStreamState.Disconnected);
+					State: ReportState(stream?.State ?? VideoStreamState.Disconnected));
 			})
 			.ToList();
 
@@ -112,6 +112,17 @@ internal sealed class CameraStreamProvider : IVideoStreamProvider, IAsyncDisposa
 			CameraSourceKind.Mjpeg => Strings.VideoStreams.Kinds.Mjpeg(),
 			_ => Strings.VideoStreams.Kinds.Snapshot()
 		};
+	}
+
+	/// <summary>
+	/// A configured camera can always be opened, even when its source is not running yet: Macro Deck's
+	/// readers refuse to open a stream reported as <c>Disconnected</c> or <c>Unavailable</c>, and the
+	/// producer only starts once somebody opens it. Reporting the idle state as <c>Connected</c> breaks
+	/// that deadlock; <c>Connecting</c> would be just as openable but reads worse in a picker.
+	/// </summary>
+	private static VideoStreamState ReportState(VideoStreamState state)
+	{
+		return state == VideoStreamState.Connected ? VideoStreamState.Connected : VideoStreamState.Connecting;
 	}
 
 	private void OnStreamChanged(CameraStream stream)

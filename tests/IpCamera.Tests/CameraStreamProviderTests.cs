@@ -53,7 +53,23 @@ public sealed class CameraStreamProviderTests
 		var streams = await provider.GetStreamsAsync(CancellationToken.None);
 
 		Assert.That(streams.Select(stream => stream.Id), Is.EquivalentTo(["one", "two"]));
-		Assert.That(streams.All(stream => stream.State == VideoStreamState.Disconnected), Is.True);
+	}
+
+	[Test]
+	public async Task An_idle_camera_is_still_reported_as_openable()
+	{
+		// Macro Deck's readers do not open a stream reported as Disconnected or Unavailable, and the
+		// producer only starts when a reader opens one. Reporting it as Connecting keeps it openable.
+		await using var registry = await RegistryAsync(Camera());
+		await using var provider = new CameraStreamProvider(
+			registry,
+			new StubEndpoint(),
+			new FakeVideoStreamProviderContext(),
+			_logger);
+
+		var streams = await provider.GetStreamsAsync(CancellationToken.None);
+
+		Assert.That(streams.Single().State, Is.EqualTo(VideoStreamState.Connecting));
 	}
 
 	[Test]
