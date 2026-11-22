@@ -32,6 +32,14 @@ scope, the last three are larger and can wait.
   `UiWidgetAppearance.Read`, and draw a label overlay over the video. Add the standard appearance
   section to the widget configuration and allow the keys in the data schema.
 
+- [ ] **Pan the picture in Fill mode, with a preview**
+  When Fit is Fill, offer horizontal and vertical position controls, and optionally zoom, so the user
+  can choose which part of the cropped picture is visible. `UiVideoStream` has no offset of its own, so
+  wrap it in a `UiTransform` and let the tile's clipping crop the moved picture. The live widget preview
+  in the editor is the preview. Store `offsetX`, `offsetY` and `zoom` in the widget data, clear them when
+  Fit is Fit, and verify that presses still reach the widget with a non-zero offset. Test the tree in the
+  web client and the Companion app, since both must apply the transform to the live video.
+
 ## Later
 
 - [ ] **ONVIF discovery**
