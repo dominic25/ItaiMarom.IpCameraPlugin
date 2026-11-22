@@ -1,9 +1,9 @@
 {
   "$schema": "https://schemas.macro-deck.app/plugin-manifest-v1.schema.json",
   "manifestVersion": 1,
-  "id": "com.itaim.ip-camera",
+  "id": "com.itaimarom.ip-camera",
   "name": "IP Camera",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Shows live IP camera streams on Macro Deck widgets: RTSP through ffmpeg, HTTP MJPEG and snapshot cameras, including Xiaomi Mi 360 cameras behind go2rtc.",
   "icon": "Assets/icon.svg",
   "entrypoints": {
@@ -30,7 +30,7 @@
     }
   },
   "publisher": {
-    "name": "itaim"
+    "name": "ItaiMarom"
   },
   "license": "MIT",
   "permissions": [

@@ -192,7 +192,7 @@ src/IpCamera/
 
 ### Publishing
 
-The manifest id is `com.itaim.ip-camera`, the publisher is `itaim`, and the GitHub repository is not
+The manifest id is `com.itaimarom.ip-camera`, the publisher is `ItaiMarom`, and the GitHub repository is not
 set yet. Before publishing to the Macro Deck Store, add the real `repository` URL to
 `src/IpCamera/manifest.json`, make the publisher match the Creator Portal owner, and run the release
 workflow by publishing a GitHub release. The Store builds and signs the package from that workflow.

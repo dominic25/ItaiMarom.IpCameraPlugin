@@ -17,7 +17,7 @@ public sealed class ShowCameraActionTests
 	public async Task The_pressed_widget_camera_opens_in_a_modal()
 	{
 		using var data = JsonDocument.Parse("""{"camera":"camera-1"}""");
-		var widgets = new StubWidgetApi(new WidgetDataSnapshot("widget-1", "com.itaim.ip-camera::camera", data.RootElement.Clone()));
+		var widgets = new StubWidgetApi(new WidgetDataSnapshot("widget-1", "com.itaimarom.ip-camera::camera", data.RootElement.Clone()));
 		var ui = new StubInteractions();
 		var executor = new ShowCameraAction(() => widgets, _logger).CreateExecutor();
 
@@ -33,7 +33,7 @@ public sealed class ShowCameraActionTests
 	public async Task A_widget_without_a_camera_is_reported_as_not_configured()
 	{
 		using var data = JsonDocument.Parse("""{"camera":""}""");
-		var widgets = new StubWidgetApi(new WidgetDataSnapshot("widget-1", "com.itaim.ip-camera::camera", data.RootElement.Clone()));
+		var widgets = new StubWidgetApi(new WidgetDataSnapshot("widget-1", "com.itaimarom.ip-camera::camera", data.RootElement.Clone()));
 		var executor = new ShowCameraAction(() => widgets, _logger).CreateExecutor();
 
 		var result = await executor.ExecuteAsync(Context(new StubInteractions()));

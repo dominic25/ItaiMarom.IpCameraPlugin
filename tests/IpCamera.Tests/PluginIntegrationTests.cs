@@ -71,7 +71,7 @@ public sealed class LocalizationTests
 	[Test]
 	public void The_catalog_is_scoped_to_the_plugin_id()
 	{
-		Assert.That(Strings.LocalizationCatalog.Scope, Is.EqualTo("plugin:com.itaim.ip-camera"));
+		Assert.That(Strings.LocalizationCatalog.Scope, Is.EqualTo("plugin:com.itaimarom.ip-camera"));
 	}
 
 	[Test]
