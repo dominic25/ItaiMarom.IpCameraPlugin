@@ -24,16 +24,6 @@ public sealed class CameraWidgetTests
 	}
 
 	[Test]
-	public void A_filled_widget_with_an_offset_draws_a_transform()
-	{
-		var surface = Surface(new { camera = "camera-1", fit = "cover", zoom = 1.4, offsetX = 0.2, offsetY = -0.1 });
-
-		using var view = new UiView(surface, CameraWidget.BuildView(surface, ProviderId));
-
-		Assert.That(Contains(view.Tree.Root, "ui.transform"), Is.True);
-	}
-
-	[Test]
 	public void A_label_is_drawn_over_the_picture()
 	{
 		var surface = Surface(new { camera = "camera-1", label = "Front door" });
@@ -41,16 +31,6 @@ public sealed class CameraWidgetTests
 		using var view = new UiView(surface, CameraWidget.BuildView(surface, ProviderId));
 
 		Assert.That(Contains(view.Tree.Root, "ui.text"), Is.True);
-	}
-
-	[Test]
-	public void A_fit_widget_ignores_the_crop_settings()
-	{
-		var surface = Surface(new { camera = "camera-1", fit = "contain", zoom = 2, offsetX = 0.5 });
-
-		using var view = new UiView(surface, CameraWidget.BuildView(surface, ProviderId));
-
-		Assert.That(Contains(view.Tree.Root, "ui.transform"), Is.False);
 	}
 
 	[Test]

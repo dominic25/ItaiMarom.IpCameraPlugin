@@ -13,9 +13,10 @@ scope, the last three are larger and can wait.
   Decide whether a timeout blocks saving or only warns, since a camera can be temporarily offline.
 
 - [x] **Tap to enlarge**
-  A short press opens a modal with the same stream at full size, with a close control and the same fit
-  mode. Add `SupportsFlows` so a user's own Short Press flow wins over the default, and allow `flows` in
-  the widget data schema. Test the modal session and the flow priority.
+  A short press opens a modal with the same stream, filling Macro Deck's modal box, which the client
+  fixes at about 34rem by 36rem. A plugin cannot make that box true full screen. Add `SupportsFlows` so
+  a user's own Short Press flow wins over the default, and allow `flows` in the widget data schema.
+  Test the modal session and the flow priority.
 
 - [x] **Offline and state feedback**
   When a producer fails, call `UpdateSessionAsync` with `Reconnecting` and a localized message so the
@@ -32,15 +33,14 @@ scope, the last three are larger and can wait.
   `UiWidgetAppearance.Read`, and draw a label overlay over the video. Add the standard appearance
   section to the widget configuration and allow the keys in the data schema.
 
-- [x] **Pan the picture in Fill mode, with a preview**
-  When Fit is Fill, offer horizontal and vertical position controls, and optionally zoom, so the user
-  can choose which part of the cropped picture is visible. `UiVideoStream` has no offset of its own, so
-  wrap it in a `UiTransform` and let the tile's clipping crop the moved picture. The live widget preview
-  in the editor is the preview. Store `offsetX`, `offsetY` and `zoom` in the widget data, clear them when
-  Fit is Fit, and verify that presses still reach the widget with a non-zero offset. Test the tree in the
-  web client and the Companion app, since both must apply the transform to the live video.
-
 ## Later
+
+- [ ] **Crop panning inside a filled frame** (blocked on Macro Deck)
+  `UiVideoStream` crops inside its own element for `Cover`, so a `UiTransform` around it can only move
+  the already-cropped picture. Panning cannot reveal the part of the frame the video component hid. A
+  movable crop rectangle needs `Zoom` and `OffsetX`/`OffsetY` on the video component itself, the way
+  `UiButton` already frames artwork. Track that client capability, then restore the rectangle editor
+  and its live preview.
 
 - [ ] **Pan and tilt control**
   The Mi 360 moves with Xiaomi's encrypted motor command (`cmdMotorReq` 0x112, operations 1 left,

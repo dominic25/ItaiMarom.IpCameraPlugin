@@ -23,9 +23,6 @@ internal static class CameraWidget
 
 	public const string CameraKey = "camera";
 	public const string FitKey = "fit";
-	public const string ZoomKey = "zoom";
-	public const string OffsetXKey = "offsetX";
-	public const string OffsetYKey = "offsetY";
 
 	public const string FitContain = "contain";
 	public const string FitCover = "cover";
@@ -36,9 +33,6 @@ internal static class CameraWidget
 		  "properties": {
 		    "camera": { "type": "string" },
 		    "fit": { "type": "string" },
-		    "zoom": { "type": "number" },
-		    "offsetX": { "type": "number" },
-		    "offsetY": { "type": "number" },
 		    "flows": { "type": "array" },
 		    "backgroundColor": { "type": "string" },
 		    "label": { "type": "string" },
@@ -100,26 +94,6 @@ internal static class CameraWidget
 			Fallback = Placeholder(Strings.Widgets.Camera.UpdateRequired())
 		};
 
-		if (fit == FitCover)
-		{
-			var zoom = Math.Clamp(ReadDouble(data, ZoomKey, 1), 1, 4);
-			var offsetX = Math.Clamp(ReadDouble(data, OffsetXKey, 0), -0.75, 0.75);
-			var offsetY = Math.Clamp(ReadDouble(data, OffsetYKey, 0), -0.75, 0.75);
-
-			if (zoom > 1 || offsetX != 0 || offsetY != 0)
-			{
-				content = new UiTransform
-				{
-					Key = "crop",
-					Fill = true,
-					Zoom = UiValue.Of(zoom),
-					OffsetX = UiValue.Of(offsetX),
-					OffsetY = UiValue.Of(offsetY),
-					Children = [content]
-				};
-			}
-		}
-
 		UiElement[] children = BuildLabel(appearance) is { } label
 			? [content, label]
 			: [content];
@@ -157,16 +131,14 @@ internal static class CameraWidget
 		{
 			Key = "modal",
 			Fill = true,
-			Justify = UiValue.Of(UiComponentJustify.Center),
-			Align = UiValue.Of(UiComponentAlignments.Center),
-			Padding = 0.02,
+			Background = UiValue.Of("#000000"),
 			Children =
 			[
 				new UiVideoStream
 				{
 					Key = "stream",
 					Stream = UiValue.Of(new UiVideoStreamReference { Provider = providerId, Id = cameraId }),
-					Fit = UiValue.Of(FitContain),
+					Fit = UiValue.Of(FitCover),
 					Fill = true,
 					Fallback = Placeholder(Strings.Widgets.Camera.UpdateRequired())
 				}
@@ -179,9 +151,6 @@ internal static class CameraWidget
 		var data = UiWidgetSurface.Data(surface);
 		var camera = new UiState<string>(ReadString(data, CameraKey) ?? string.Empty);
 		var fit = new UiState<string>(ReadString(data, FitKey) == FitContain ? FitContain : FitCover);
-		var zoom = new UiState<double>(Math.Clamp(ReadDouble(data, ZoomKey, 1), 1, 4));
-		var offsetX = new UiState<double>(Math.Clamp(ReadDouble(data, OffsetXKey, 0), -0.75, 0.75));
-		var offsetY = new UiState<double>(Math.Clamp(ReadDouble(data, OffsetYKey, 0), -0.75, 0.75));
 		var flows = new UiState<JsonElement>(
 			data.ValueKind == JsonValueKind.Object &&
 			data.TryGetProperty("flows", out var stored) &&
@@ -218,40 +187,6 @@ internal static class CameraWidget
 						]),
 						Binding = Bind.To(fit)
 					},
-					new UiNumberInput
-					{
-						Key = ZoomKey,
-						Label = Strings.Widgets.Camera.Config.Zoom(),
-						Description = Strings.Widgets.Camera.Config.ZoomDescription(),
-						Min = 1,
-						Max = 4,
-						Step = 0.05,
-						ShowSlider = true,
-						Binding = Bind.To(zoom),
-						VisibleWhen = VisibleWhenCover()
-					},
-					new UiNumberInput
-					{
-						Key = OffsetXKey,
-						Label = Strings.Widgets.Camera.Config.HorizontalPosition(),
-						Min = -0.75,
-						Max = 0.75,
-						Step = 0.01,
-						ShowSlider = true,
-						Binding = Bind.To(offsetX),
-						VisibleWhen = VisibleWhenCover()
-					},
-					new UiNumberInput
-					{
-						Key = OffsetYKey,
-						Label = Strings.Widgets.Camera.Config.VerticalPosition(),
-						Min = -0.75,
-						Max = 0.75,
-						Step = 0.01,
-						ShowSlider = true,
-						Binding = Bind.To(offsetY),
-						VisibleWhen = VisibleWhenCover()
-					},
 					UiWidgetAppearance.Section(data, UiWidgetAppearanceFields.All)
 				]
 			},
@@ -269,11 +204,6 @@ internal static class CameraWidget
 				]
 			}
 		};
-	}
-
-	private static UiValue<UiVisibleWhen> VisibleWhenCover()
-	{
-		return UiValue.Of(new UiVisibleWhen { ParameterName = FitKey, Values = [FitCover] });
 	}
 
 	private static UiStack? BuildLabel(UiWidgetAppearanceValues appearance)
@@ -320,16 +250,6 @@ internal static class CameraWidget
 				}
 			]
 		};
-	}
-
-	private static double ReadDouble(JsonElement data, string key, double fallback)
-	{
-		return data.ValueKind == JsonValueKind.Object &&
-			data.TryGetProperty(key, out var value) &&
-			value.ValueKind == JsonValueKind.Number &&
-			value.TryGetDouble(out var number)
-				? number
-				: fallback;
 	}
 
 	private static UiStack Placeholder(MacroDeck.Localization.LocalizedText hint)

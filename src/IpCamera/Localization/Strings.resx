@@ -58,18 +58,6 @@
   <data name="Widgets.Camera.Config.FitContain" xml:space="preserve">
     <value>Fit</value>
   </data>
-  <data name="Widgets.Camera.Config.Zoom" xml:space="preserve">
-    <value>Zoom</value>
-  </data>
-  <data name="Widgets.Camera.Config.ZoomDescription" xml:space="preserve">
-    <value>Zooms into the picture while it fills the tile.</value>
-  </data>
-  <data name="Widgets.Camera.Config.HorizontalPosition" xml:space="preserve">
-    <value>Horizontal position</value>
-  </data>
-  <data name="Widgets.Camera.Config.VerticalPosition" xml:space="preserve">
-    <value>Vertical position</value>
-  </data>
   <data name="Setup.Title" xml:space="preserve">
     <value>Add camera</value>
   </data>

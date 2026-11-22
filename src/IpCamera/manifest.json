@@ -3,7 +3,7 @@
   "manifestVersion": 1,
   "id": "com.itaim.ip-camera",
   "name": "IP Camera",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Shows live IP camera streams on Macro Deck widgets: RTSP through ffmpeg, HTTP MJPEG and snapshot cameras, including Xiaomi Mi 360 cameras behind go2rtc.",
   "icon": "Assets/icon.svg",
   "entrypoints": {

@@ -11,8 +11,8 @@ converted with ffmpeg.
 ## What it adds to Macro Deck
 
 - **A Camera widget**: pick one of the configured cameras, choose whether the picture fills the tile or
-  fits inside it, and pan or zoom the cropped picture when it fills. The label, background and colours
-  follow Macro Deck's standard widget appearance. A short press opens the camera full screen.
+  fits inside it, and give it a label, background and colours. A short press opens the camera in a
+  modal as large as Macro Deck's fixed dialog box allows.
 - **A video stream provider**: every configured camera is listed under Source in any widget or action
   that can show a video stream, not only in this plugin's own widget.
 - **A camera setup flow**: one Macro Deck configuration entry per camera. The flow fetches one frame
@@ -131,6 +131,10 @@ camera --HTTP/RTSP--> plugin (one producer per camera) --multipart MJPEG--> 127.
 ## Limitations
 
 - MJPEG only. Every Macro Deck client can play it; the plugin does not produce HLS.
+- The enlarged view is a Macro Deck modal. Its box is fixed by the client at roughly 34rem by 36rem on
+  the desktop, and a plugin cannot make it true full screen.
+- Panning inside a filled frame is not supported by Macro Deck's video component today. It crops inside
+  its own element, so a transform can only move the cropped picture, not reveal the hidden part.
 - HTTP digest authentication is not supported, only basic. Use a local restreamer such as go2rtc if
   the camera insists on digest.
 - No PTZ, no talk-back, no recordings, no motion notifications. It only displays a live picture.
