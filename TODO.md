@@ -42,6 +42,17 @@ scope, the last three are larger and can wait.
 
 ## Later
 
+- [ ] **Pan and tilt control**
+  The Mi 360 moves with Xiaomi's encrypted motor command (`cmdMotorReq` 0x112, operations 1 left,
+  2 right, 3 up, 4 down) over the same P2P session go2rtc already holds. go2rtc has an open pull
+  request for this (AlexxIT/go2rtc #2531) that adds `POST /api/xiaomi/motor?src=<stream>&operation=<1-4>`
+  and ONVIF PTZ, but it is not merged. Decide between building that branch for the server and adding a
+  "Move camera" action with left, right, up and down, or leaving Xiaomi PTZ to Home Assistant's
+  `xiaomi_camera_native` integration and calling its buttons. Store the go2rtc control stream on the
+  camera entry, since the MJPEG stream is the transcoded `_mjpeg` one. Test physical movement on
+  `chuangmi.camera.ipc019`, which is not in that project's verified model list. ONVIF PTZ belongs with
+  the ONVIF discovery item for cameras that support it.
+
 - [ ] **ONVIF discovery**
   A setup step that runs WS-Discovery, lists cameras, and fills the snapshot or RTSP URL from the media
   profiles. Needs credentials handling per camera and a decision on how much ONVIF to support.
