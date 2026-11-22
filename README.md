@@ -17,7 +17,8 @@ converted with ffmpeg.
   that can show a video stream, not only in this plugin's own widget.
 - **A camera setup flow**: one Macro Deck configuration entry per camera. The flow fetches one frame
   before saving, so a wrong URL, rejected credentials or a go2rtc stream that only offers H.265 is
-  reported immediately.
+  reported immediately. It also discovers ONVIF cameras on the LAN and resolves their RTSP or
+  snapshot address.
 - **Offline feedback**: a camera that drops out shows "The camera is offline. Reconnecting." on its
   widget, and the integration page offers a Retry action.
 
@@ -33,7 +34,8 @@ converted with ffmpeg.
 ## Adding a camera
 
 1. Open Macro Deck, then **Integrations > IP Camera > Configure**.
-2. Fill in a name, a source type and the stream URL.
+2. If ONVIF cameras answer on the network, pick one from the ONVIF field. Otherwise enter a name, a
+   source type and the stream URL.
 3. Repeat for every camera. Each one appears in the widget's camera picker immediately.
 
 | Source type | What it expects | Example |
@@ -135,6 +137,8 @@ camera --HTTP/RTSP--> plugin (one producer per camera) --multipart MJPEG--> 127.
   the desktop, and a plugin cannot make it true full screen.
 - Panning inside a filled frame is not supported by Macro Deck's video component today. It crops inside
   its own element, so a transform can only move the cropped picture, not reveal the hidden part.
+- ONVIF discovery follows the standard WS-Discovery and WS-Security flow and is covered by protocol
+  tests. A real ONVIF camera has not been used yet to verify every vendor's dialect.
 - HTTP digest authentication is not supported, only basic. Use a local restreamer such as go2rtc if
   the camera insists on digest.
 - No PTZ, no talk-back, no recordings, no motion notifications. It only displays a live picture.

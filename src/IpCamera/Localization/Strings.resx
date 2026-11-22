@@ -154,6 +154,24 @@
   <data name="Setup.Probe.NoFrame" xml:space="preserve">
     <value>The stream opened but sent no JPEG frame. For go2rtc, add the ffmpeg transcoder and use the _mjpeg stream.</value>
   </data>
+  <data name="Setup.Onvif.Label" xml:space="preserve">
+    <value>ONVIF camera</value>
+  </data>
+  <data name="Setup.Onvif.Description" xml:space="preserve">
+    <value>Pick a camera found on this network, or enter the URL manually.</value>
+  </data>
+  <data name="Setup.Onvif.Manual" xml:space="preserve">
+    <value>Enter the URL manually</value>
+  </data>
+  <data name="Setup.Onvif.Unknown" xml:space="preserve">
+    <value>The discovered camera is no longer known. Run the setup again.</value>
+  </data>
+  <data name="Setup.Onvif.ResolveFailed" xml:space="preserve">
+    <value>The camera was found, but its stream address could not be read. Check the ONVIF credentials, or enter the URL manually.</value>
+  </data>
+  <data name="Setup.Onvif.NoStream" xml:space="preserve">
+    <value>The camera reported no stream address. Enter the URL manually.</value>
+  </data>
   <data name="Setup.UnknownStep" xml:space="preserve">
     <value>This setup step is no longer available. Close the dialog and start again.</value>
   </data>

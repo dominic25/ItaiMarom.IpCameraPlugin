@@ -1,5 +1,6 @@
 using System.Globalization;
 using IpCamera.Cameras;
+using IpCamera.Onvif;
 using IpCamera.Streaming;
 using MacroDeck.Localization;
 using MacroDeck.Sdk.Actions;
@@ -15,14 +16,48 @@ namespace IpCamera.ConfigFlow;
 internal sealed class CameraConfigFlow(
 	FfmpegLocator ffmpeg,
 	ICameraProbe probe,
+	IOnvifDiscovery onvifDiscovery,
+	IOnvifClient onvifClient,
 	ILogger logger) : IConfigFlow
 {
 	private const string StepId = "camera";
+	private const string OnvifKey = "onvif";
 
-	public Task<ConfigFlowResult> StartAsync(IConfigFlowContext context, CancellationToken cancellationToken)
+	private readonly Dictionary<string, OnvifDevice> _onvifDevices = new(StringComparer.Ordinal);
+
+	public async Task<ConfigFlowResult> StartAsync(
+		IConfigFlowContext context,
+		CancellationToken cancellationToken)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
-		return Task.FromResult(ConfigFlowResult.Step(Step()));
+
+		// Discovery runs only for a new camera. Editing an entry should open at once, and the field would
+		// only be confusing next to the values already stored.
+		var isNew = (context as IConfigFlowEntryContext)?.EntryTitle is null;
+		if (isNew)
+		{
+			try
+			{
+				var devices = await onvifDiscovery
+					.DiscoverAsync(TimeSpan.FromSeconds(3), cancellationToken)
+					.ConfigureAwait(false);
+
+				foreach (var device in devices)
+				{
+					_onvifDevices[device.XAddr] = device;
+				}
+			}
+			catch (OperationCanceledException)
+			{
+				throw;
+			}
+			catch (Exception exception) when (exception is not OutOfMemoryException)
+			{
+				logger.Debug("ONVIF discovery failed: {Reason}", exception.Message);
+			}
+		}
+
+		return ConfigFlowResult.Step(Step());
 	}
 
 	public async Task<ConfigFlowResult> SubmitAsync(
@@ -44,23 +79,80 @@ internal sealed class CameraConfigFlow(
 			return FieldError("name", Strings.Setup.NameRequired());
 		}
 
-		if (!CameraDefinition.TryReadKind(ReadString(input, "kind"), out var kind))
+		var username = ReadString(input, CameraSettings.UsernameKey)?.Trim();
+		var password = ReadString(input, CameraSettings.PasswordKey);
+		if (password == "$masked")
 		{
-			return FieldError("kind", Strings.Setup.KindRequired());
+			// The host keeps the stored secret and never sends it to the flow during an edit.
+			password = null;
 		}
 
-		var urlText = ReadString(input, "url")?.Trim() ?? string.Empty;
-		if (!Uri.TryCreate(urlText, UriKind.Absolute, out var url))
+		var onvif = ReadString(input, OnvifKey);
+		CameraSourceKind kind;
+		Uri? url;
+
+		if (!string.IsNullOrEmpty(onvif))
 		{
-			return FieldError("url", Strings.Setup.UrlInvalid());
+			if (!_onvifDevices.TryGetValue(onvif, out var device))
+			{
+				return FieldError(OnvifKey, Strings.Setup.Onvif.Unknown());
+			}
+
+			var resolved = await onvifClient
+				.ResolveAsync(device, username, password, cancellationToken)
+				.ConfigureAwait(false);
+
+			if (resolved is null)
+			{
+				return FieldError(OnvifKey, Strings.Setup.Onvif.ResolveFailed());
+			}
+
+			if (resolved.StreamUri is { } streamUri &&
+				Uri.TryCreate(streamUri, UriKind.Absolute, out var rtspUrl) &&
+				rtspUrl.Scheme is "rtsp" or "rtsps")
+			{
+				kind = CameraSourceKind.Rtsp;
+				url = rtspUrl;
+			}
+			else if (resolved.SnapshotUri is { } snapshotUri &&
+				Uri.TryCreate(snapshotUri, UriKind.Absolute, out var snapshotUrl) &&
+				snapshotUrl.Scheme is "http" or "https")
+			{
+				kind = CameraSourceKind.Snapshot;
+				url = snapshotUrl;
+			}
+			else
+			{
+				return FieldError(OnvifKey, Strings.Setup.Onvif.NoStream());
+			}
+		}
+		else
+		{
+			if (!CameraDefinition.TryReadKind(ReadString(input, CameraSettings.KindKey), out kind))
+			{
+				return FieldError(CameraSettings.KindKey, Strings.Setup.KindRequired());
+			}
+
+			var urlText = ReadString(input, CameraSettings.UrlKey)?.Trim() ?? string.Empty;
+			if (!Uri.TryCreate(urlText, UriKind.Absolute, out var manualUrl))
+			{
+				return FieldError(CameraSettings.UrlKey, Strings.Setup.UrlInvalid());
+			}
+
+			var schemeFits = kind == CameraSourceKind.Rtsp
+				? manualUrl.Scheme is "rtsp" or "rtsps"
+				: manualUrl.Scheme is "http" or "https";
+			if (!schemeFits)
+			{
+				return FieldError(CameraSettings.UrlKey, Strings.Setup.UrlWrongScheme());
+			}
+
+			url = manualUrl;
 		}
 
-		var schemeFits = kind == CameraSourceKind.Rtsp
-			? url.Scheme is "rtsp" or "rtsps"
-			: url.Scheme is "http" or "https";
-		if (!schemeFits)
+		if (url is null)
 		{
-			return FieldError("url", Strings.Setup.UrlWrongScheme());
+			return FieldError(CameraSettings.UrlKey, Strings.Setup.UrlInvalid());
 		}
 
 		var fps = ReadNumber(input, CameraSettings.FpsKey, 5);
@@ -73,14 +165,6 @@ internal sealed class CameraConfigFlow(
 		if (maxWidth is < 0 or > 3840)
 		{
 			return FieldError(CameraSettings.MaxWidthKey, Strings.Setup.WidthRange());
-		}
-
-		var username = ReadString(input, CameraSettings.UsernameKey)?.Trim();
-		var password = ReadString(input, CameraSettings.PasswordKey);
-		if (password == "$masked")
-		{
-			// The host keeps the stored secret and never sends it to the flow during an edit.
-			password = null;
 		}
 
 		var transport = ReadString(input, CameraSettings.RtspTransportKey) == "udp" ? "udp" : "tcp";
@@ -142,7 +226,7 @@ internal sealed class CameraConfigFlow(
 		};
 	}
 
-	private static ConfigFlowResult FieldError(string field, LocalizedText message)
+	private ConfigFlowResult FieldError(string field, LocalizedText message)
 	{
 		return ConfigFlowResult.Error(
 			Step(),
@@ -150,33 +234,57 @@ internal sealed class CameraConfigFlow(
 			new Dictionary<string, LocalizedText> { [field] = message });
 	}
 
-	private static ConfigFlowStep Step()
+	private ConfigFlowStep Step()
 	{
+		var fields = new List<ActionParameter>
+		{
+			ActionParameter.Text("name", label: Strings.Setup.Name(), required: true, maxLength: 100)
+		};
+
+		if (_onvifDevices.Count > 0)
+		{
+			var options = new List<ActionParameterOption>
+			{
+				new() { Value = string.Empty, Label = Strings.Setup.Onvif.Manual() }
+			};
+
+			options.AddRange(_onvifDevices.Values
+				.OrderBy(device => device.DisplayName, StringComparer.OrdinalIgnoreCase)
+				.Select(device => new ActionParameterOption
+				{
+					Value = device.XAddr,
+					Label = LocalizedText.FromLiteral($"{device.DisplayName} ({device.Host})")
+				}));
+
+			fields.Add(ActionParameter.Choice(
+				OnvifKey,
+				options,
+				label: Strings.Setup.Onvif.Label(),
+				description: Strings.Setup.Onvif.Description()));
+		}
+
+		fields.Add(ActionParameter.Choice(
+			CameraSettings.KindKey,
+			[
+				new ActionParameterOption { Value = "snapshot", Label = Strings.Setup.KindSnapshot() },
+				new ActionParameterOption { Value = "mjpeg", Label = Strings.Setup.KindMjpeg() },
+				new ActionParameterOption { Value = "rtsp", Label = Strings.Setup.KindRtsp() }
+			],
+			label: Strings.Setup.Kind(),
+			defaultValue: "snapshot"));
+
+		fields.Add(ActionParameter.Text(
+			CameraSettings.UrlKey,
+			label: Strings.Setup.Url(),
+			description: Strings.Setup.UrlDescription(),
+			placeholder: "http://192.168.1.20/snapshot.jpg"));
+
 		return new ConfigFlowStep
 		{
 			StepId = StepId,
 			Title = Strings.Setup.Title(),
 			Description = Strings.Setup.Description(),
-			Fields =
-			[
-				ActionParameter.Text("name", label: Strings.Setup.Name(), required: true, maxLength: 100),
-				ActionParameter.Choice(
-					CameraSettings.KindKey,
-					[
-						new ActionParameterOption { Value = "snapshot", Label = Strings.Setup.KindSnapshot() },
-						new ActionParameterOption { Value = "mjpeg", Label = Strings.Setup.KindMjpeg() },
-						new ActionParameterOption { Value = "rtsp", Label = Strings.Setup.KindRtsp() }
-					],
-					label: Strings.Setup.Kind(),
-					defaultValue: "snapshot",
-					required: true),
-				ActionParameter.Text(
-					CameraSettings.UrlKey,
-					label: Strings.Setup.Url(),
-					description: Strings.Setup.UrlDescription(),
-					placeholder: "http://192.168.1.20/snapshot.jpg",
-					required: true)
-			],
+			Fields = fields,
 			AdvancedFields =
 			[
 				ActionParameter.Text(

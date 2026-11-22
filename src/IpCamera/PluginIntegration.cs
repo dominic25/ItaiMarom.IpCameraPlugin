@@ -1,6 +1,7 @@
 using IpCamera.Actions;
 using IpCamera.Cameras;
 using IpCamera.ConfigFlow;
+using IpCamera.Onvif;
 using IpCamera.Streaming;
 using IpCamera.VideoStreams;
 using IpCamera.Widgets;
@@ -38,6 +39,8 @@ internal sealed class PluginIntegration : IPluginIntegration,
 	private readonly MjpegServer _server;
 	private readonly FfmpegLocator _ffmpeg;
 	private readonly ICameraProbe _probe;
+	private readonly IOnvifDiscovery _onvifDiscovery;
+	private readonly IOnvifClient _onvifClient;
 
 	private CameraStreamProvider? _provider;
 	private string? _providerQualifiedId;
@@ -50,12 +53,16 @@ internal sealed class PluginIntegration : IPluginIntegration,
 		MjpegServer server,
 		FfmpegLocator ffmpeg,
 		ICameraProbe probe,
+		IOnvifDiscovery onvifDiscovery,
+		IOnvifClient onvifClient,
 		ILogger logger)
 	{
 		_registry = registry;
 		_server = server;
 		_ffmpeg = ffmpeg;
 		_probe = probe;
+		_onvifDiscovery = onvifDiscovery;
+		_onvifClient = onvifClient;
 		_logger = logger.ForContext<PluginIntegration>();
 		Actions = [new ShowCameraAction(() => _context?.Widgets, _logger)];
 	}
@@ -72,7 +79,7 @@ internal sealed class PluginIntegration : IPluginIntegration,
 
 	IConfigFlow IConfigFlowProvider.CreateConfigFlow()
 	{
-		return new CameraConfigFlow(_ffmpeg, _probe, _logger);
+		return new CameraConfigFlow(_ffmpeg, _probe, _onvifDiscovery, _onvifClient, _logger);
 	}
 
 	public async Task InitializeAsync(IIntegrationContext context)

@@ -21,6 +21,7 @@ src/IpCamera/
   VideoStreams/              the video stream provider and its state notifications
   Widgets/                   camera widget view, configuration, UI session adapter
   ConfigFlow/                the camera setup flow
+  Onvif/                     WS-Discovery and ONVIF stream resolution
   Actions/                   the full-screen camera action
   Localization/Strings.resx  every user-facing string
   Assets/icon.svg            the icon the manifest declares

@@ -51,7 +51,7 @@ scope, the last three are larger and can wait.
   appearance handling. Add the folder-view configuration tree, the `folder` surface declaration, tests
   and the conformance run.
 
-- [ ] **ONVIF discovery**
+- [x] **ONVIF discovery**
   A setup step that runs WS-Discovery, lists cameras, and fills the snapshot or RTSP URL from the media
   profiles. Needs credentials handling per camera and a decision on how much ONVIF to support.
 

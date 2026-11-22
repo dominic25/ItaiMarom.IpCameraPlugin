@@ -1,5 +1,6 @@
 using IpCamera.Cameras;
 using IpCamera.ConfigFlow;
+using IpCamera.Onvif;
 using IpCamera.Streaming;
 using MacroDeck.Sdk.ConfigFlow;
 using MacroDeck.Sdk.Http;
@@ -117,17 +118,95 @@ public sealed class CameraConfigFlowTests
 
 	private static CameraConfigFlow CreateFlow(
 		FfmpegLocator? ffmpeg = null,
-		CameraProbeResult? probeResult = null)
+		CameraProbeResult? probeResult = null,
+		IOnvifDiscovery? discovery = null,
+		IOnvifClient? onvifClient = null)
 	{
 		return new CameraConfigFlow(
 			ffmpeg ?? new FfmpegLocator(null),
 			new StubProbe(probeResult ?? CameraProbeResult.Success),
+			discovery ?? new StubDiscovery(),
+			onvifClient ?? new StubOnvifClient(null),
 			_logger);
 	}
 
 	private static Dictionary<string, object?> Input(params (string Key, object? Value)[] pairs)
 	{
 		return pairs.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
+	}
+
+	[Test]
+	public async Task A_discovered_onvif_camera_resolves_its_rtsp_url()
+	{
+		var device = new OnvifDevice("http://192.168.1.50/onvif/device_service", "Front", "Hikvision");
+		var ffmpegPath = Path.GetTempFileName();
+
+		try
+		{
+			var flow = CreateFlow(
+				ffmpeg: new FfmpegLocator(ffmpegPath),
+				discovery: new StubDiscovery([device]),
+				onvifClient: new StubOnvifClient(new OnvifStream(
+					"profile1",
+					"rtsp://192.168.1.50/Streaming/Channels/101",
+					null)));
+
+			await flow.StartAsync(new StubFlowContext(), CancellationToken.None);
+
+			var result = await flow.SubmitAsync("camera", Input(
+				("name", "Front"),
+				("onvif", device.XAddr),
+				("kind", "snapshot"),
+				("url", "")), new StubFlowContext(), CancellationToken.None);
+
+			Assert.That(result.Kind, Is.EqualTo(ConfigFlowResultKind.Complete));
+			Assert.That(result.Values![CameraSettings.KindKey].Value, Is.EqualTo("rtsp"));
+			Assert.That(result.Values[CameraSettings.UrlKey].Value, Does.StartWith("rtsp://"));
+		}
+		finally
+		{
+			File.Delete(ffmpegPath);
+		}
+	}
+
+	[Test]
+	public async Task An_onvif_camera_without_a_stream_reports_the_field()
+	{
+		var device = new OnvifDevice("http://192.168.1.50/onvif/device_service", "Front", "Hikvision");
+		var flow = CreateFlow(discovery: new StubDiscovery([device]));
+
+		await flow.StartAsync(new StubFlowContext(), CancellationToken.None);
+
+		var result = await flow.SubmitAsync("camera", Input(
+			("name", "Front"),
+			("onvif", device.XAddr),
+			("kind", "snapshot"),
+			("url", "")), new StubFlowContext(), CancellationToken.None);
+
+		Assert.That(result.Kind, Is.EqualTo(ConfigFlowResultKind.Error));
+		Assert.That(result.FieldErrors, Does.ContainKey("onvif"));
+	}
+
+	private sealed class StubDiscovery(IReadOnlyList<OnvifDevice>? devices = null) : IOnvifDiscovery
+	{
+		public Task<IReadOnlyList<OnvifDevice>> DiscoverAsync(
+			TimeSpan timeout,
+			CancellationToken cancellationToken)
+		{
+			return Task.FromResult(devices ?? []);
+		}
+	}
+
+	private sealed class StubOnvifClient(OnvifStream? result) : IOnvifClient
+	{
+		public Task<OnvifStream?> ResolveAsync(
+			OnvifDevice device,
+			string? username,
+			string? password,
+			CancellationToken cancellationToken)
+		{
+			return Task.FromResult(result);
+		}
 	}
 
 	private sealed class StubProbe(CameraProbeResult result) : ICameraProbe
