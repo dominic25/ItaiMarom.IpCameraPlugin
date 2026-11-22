@@ -24,6 +24,7 @@ src/IpCamera/
   Onvif/                     WS-Discovery and ONVIF stream resolution
   Actions/                   the full-screen camera action
   Localization/Strings.resx  every user-facing string
+store/                     Store screenshots, listing copy and their build scripts
   Assets/icon.svg            the icon the manifest declares
 tests/IpCamera.Tests/        unit tests, the harness integration tests and one local end-to-end test
 ```

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="slides.css">
+<style>
+  .dialog { left: 112px; top: 300px; }
+  .features { position: absolute; right: 112px; top: 300px; width: 760px; display: flex; flex-direction: column; gap: 18px; }
+  .features .card { padding: 24px 26px; }
+  .features .card .icon { width: 46px; height: 46px; margin-bottom: 12px; font-size: 20px; }
+  .features .card h3 { font-size: 23px; }
+  .features .card p { font-size: 17px; }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="bg">
+    <div class="glow blue"></div>
+    <div class="glow teal"></div>
+    <div class="grid"></div>
+  </div>
+
+  <div class="head">
+    <div class="kicker"><img src="../../src/IpCamera/Assets/icon.svg" alt=""><span>Setup</span></div>
+    <h1>One dialog, checked before saving</h1>
+    <p class="sub">The setup fetches a frame from the camera, so a wrong URL, a rejected password or a go2rtc stream that only offers H.265 is reported immediately.</p>
+  </div>
+
+  <div class="dialog">
+    <div class="title"><img src="../../src/IpCamera/Assets/icon.svg" alt="">Add camera</div>
+    <div class="field">
+      <label>Name</label>
+      <div class="input">Front door</div>
+    </div>
+    <div class="field">
+      <label>ONVIF camera</label>
+      <div class="input">Hikvision (192.168.1.50)</div>
+      <div class="hint">Cameras found on this network appear here. Or enter a URL manually.</div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Source type</label>
+        <div class="input">RTSP</div>
+      </div>
+      <div class="field">
+        <label>Frames per second</label>
+        <div class="input">5</div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Stream URL</label>
+      <div class="input mono">rtsp://192.168.1.50/Streaming/Channels/101</div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Username</label>
+        <div class="input">admin</div>
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <div class="input">••••••••</div>
+      </div>
+    </div>
+    <div class="ok"><span class="tick">✓</span> Stream answered with a live frame.</div>
+  </div>
+
+  <div class="features">
+    <div class="card">
+      <div class="icon">◎</div>
+      <h3>ONVIF discovery</h3>
+      <p>Cameras that answer WS-Discovery are listed with their name and address. The plugin resolves their RTSP or snapshot URL with WS-Security.</p>
+    </div>
+    <div class="card">
+      <div class="icon">✓</div>
+      <h3>Stream test</h3>
+      <p>Unreachable host, rejected credentials, an HTML page or a stream with no JPEG frame each get their own message.</p>
+    </div>
+    <div class="card">
+      <div class="icon">↻</div>
+      <h3>Offline feedback</h3>
+      <p>A camera that drops out shows "The camera is offline. Reconnecting." on its tile, and the integration page offers Retry.</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>

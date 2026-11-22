@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="slides.css">
+<style>
+  .hero-copy { position: absolute; left: 112px; top: 128px; width: 860px; }
+  .hero-copy h1 { font-size: 100px; margin-top: 34px; }
+  .hero-copy .sub { font-size: 30px; margin: 30px 0 0; max-width: 810px; }
+  .hero-copy .chips { margin-top: 36px; }
+  .hero-copy .note { margin-top: 34px; max-width: 760px; }
+
+  .hero-stage { position: absolute; right: 84px; top: 96px; width: 880px; height: 880px; }
+  .hero-stage .halo {
+    position: absolute; inset: -130px;
+    background: radial-gradient(circle at 55% 45%, rgba(56,189,248,.22), rgba(45,212,191,.10) 45%, transparent 68%);
+    filter: blur(8px);
+  }
+  .hero-stage .deck { inset: 0; transform: rotate(-1.2deg); }
+  .hero-stage .cam { height: 405px; }
+  .hero-stage .cam .name { font-size: 18px; }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="bg">
+    <div class="glow blue"></div>
+    <div class="glow teal"></div>
+    <div class="grid"></div>
+  </div>
+
+  <div class="hero-copy">
+    <div class="kicker">
+      <img src="../../src/IpCamera/Assets/icon.svg" alt="">
+      <span>Macro Deck 3 plugin</span>
+    </div>
+    <h1>IP <span class="grad">Camera</span></h1>
+    <p class="sub">Live camera tiles on your deck. Snapshot, MJPEG, RTSP and ONVIF, with the Xiaomi Mi 360 handled through go2rtc.</p>
+    <div class="chips">
+      <span class="chip"><i></i>RTSP via ffmpeg</span>
+      <span class="chip"><i></i>MJPEG and snapshots</span>
+      <span class="chip"><i></i>ONVIF discovery</span>
+    </div>
+    <p class="note"><span class="dot"></span>The plugin reads the camera on the Macro Deck computer and relays the picture to the deck. No cloud account is stored in the plugin.</p>
+  </div>
+
+  <div class="hero-stage">
+    <div class="halo"></div>
+    <div class="deck">
+      <div class="cam night">
+        <div class="scene"><div class="moon"></div><div class="ground"></div><div class="house"></div><div class="window"></div><div class="tree"></div><div class="path"></div></div>
+        <div class="vignette"></div>
+        <div class="overlay">
+          <div class="top"><span class="live"><i></i>LIVE</span><span class="time">21:42</span></div>
+          <div class="bottom"><span class="name">Front door</span><span class="kind">Snapshot</span></div>
+        </div>
+      </div>
+      <div class="cam garden">
+        <div class="scene"><div class="ground"></div><div class="tree"></div></div>
+        <div class="vignette"></div>
+        <div class="overlay">
+          <div class="top"><span class="live"><i></i>LIVE</span><span class="time">21:42</span></div>
+          <div class="bottom"><span class="name">Garden</span><span class="kind">MJPEG</span></div>
+        </div>
+      </div>
+      <div class="cam dusk">
+        <div class="scene"><div class="moon"></div><div class="ground"></div><div class="house"></div><div class="window"></div></div>
+        <div class="vignette"></div>
+        <div class="overlay">
+          <div class="top"><span class="live"><i></i>LIVE</span><span class="time">21:42</span></div>
+          <div class="bottom"><span class="name">Driveway</span><span class="kind">RTSP</span></div>
+        </div>
+      </div>
+      <div class="cam day">
+        <div class="scene"><div class="ground"></div><div class="house"></div><div class="window"></div></div>
+        <div class="vignette"></div>
+        <div class="overlay">
+          <div class="top"><span class="live"><i></i>LIVE</span><span class="time">21:42</span></div>
+          <div class="bottom"><span class="name">Mi 360</span><span class="kind">go2rtc</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

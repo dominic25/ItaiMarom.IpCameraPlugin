@@ -32,7 +32,7 @@
   "publisher": {
     "name": "ItaiMarom"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "permissions": [
     "host:video-streams"
   ],

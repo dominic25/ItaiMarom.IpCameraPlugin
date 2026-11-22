@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="slides.css">
+<style>
+  .grid4 { position: absolute; left: 112px; right: 112px; top: 292px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .feature { border-radius: 24px; background: #0f141b; border: 1px solid rgba(255,255,255,.09); padding: 18px; }
+  .feature .cam { height: 250px; }
+  .feature .cam .name { font-size: 15px; }
+  .feature .cam .kind { font-size: 10px; }
+  .feature h3 { margin: 20px 4px 6px; font-size: 22px; font-weight: 600; }
+  .feature p { margin: 0 4px; font-size: 16px; color: #a8b3c1; line-height: 1.45; }
+  .modal { position: relative; height: 250px; border-radius: 20px; background: #05090f; border: 1px solid rgba(255,255,255,.10); padding: 14px; display: flex; align-items: center; justify-content: center; }
+  .modal .frame { width: 100%; height: 100%; border-radius: 14px; position: relative; overflow: hidden; }
+  .modal .frame .cam { position: absolute; inset: 0; height: 100%; border-radius: 14px; }
+  .modal .chrome { position: absolute; top: 8px; right: 10px; display: flex; gap: 6px; }
+  .modal .chrome i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.25); display: block; }
+  .caption-pill { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); padding: 7px 13px; border-radius: 999px; background: rgba(9,13,19,.88); border: 1px solid rgba(255,255,255,.12); font-size: 13px; color: #cfd8e3; white-space: nowrap; }
+  .bottom-note { position: absolute; left: 112px; right: 112px; bottom: 84px; font-size: 20px; color: #a8b3c1; }
+  .bottom-note b { color: #dbe3ec; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="bg">
+    <div class="glow blue"></div>
+    <div class="glow teal"></div>
+    <div class="grid"></div>
+  </div>
+
+  <div class="head">
+    <div class="kicker"><img src="../../src/IpCamera/Assets/icon.svg" alt=""><span>Widget</span></div>
+    <h1>Built for a deck</h1>
+    <p class="sub">Fill the tile or show the whole frame, add a label and colours, and open a larger view with a short press.</p>
+  </div>
+
+  <div class="grid4">
+    <div class="feature">
+      <div class="cam night">
+        <div class="scene"><div class="moon"></div><div class="ground"></div><div class="house"></div><div class="window"></div><div class="tree"></div></div>
+        <div class="vignette"></div>
+        <div class="overlay">
+          <div class="top"><span class="live"><i></i>LIVE</span><span class="time">21:42</span></div>
+          <div class="bottom"><span class="name">Front door</span><span class="kind">Fill</span></div>
+        </div>
+      </div>
+      <h3>Fill</h3>
+      <p>The picture covers the tile, cropping the edges to keep the tile full.</p>
+    </div>
+
+    <div class="feature">
+      <div class="cam dusk" style="background:#05090f;">
+        <div class="scene" style="inset:24px 12px; border-radius:14px; overflow:hidden;">
+          <div class="moon"></div><div class="ground"></div><div class="house"></div><div class="window"></div>
+        </div>
+        <div class="overlay">
+          <div class="top"></div>
+          <div class="bottom"><span class="name">Front door</span><span class="kind">Fit</span></div>
+        </div>
+      </div>
+      <h3>Fit</h3>
+      <p>The whole frame stays visible, with dark bars where the shape differs.</p>
+    </div>
+
+    <div class="feature">
+      <div class="cam garden">
+        <div class="scene"><div class="ground"></div><div class="tree"></div></div>
+        <div class="vignette"></div>
+        <div class="overlay">
+          <div class="top"><span class="live"><i></i>LIVE</span><span class="time">21:42</span></div>
+          <div class="bottom"><span class="name" style="font-size:22px; color:#ffffff;">Garden</span><span class="kind">Label</span></div>
+        </div>
+      </div>
+      <h3>Label and colours</h3>
+      <p>Macro Deck's own background, label, colour, font and border settings.</p>
+    </div>
+
+    <div class="feature">
+      <div class="modal">
+        <div class="frame">
+          <div class="cam day">
+            <div class="scene"><div class="ground"></div><div class="house"></div><div class="window"></div></div>
+            <div class="vignette"></div>
+            <div class="overlay">
+              <div class="top"><span class="live"><i></i>LIVE</span><span class="time">21:42</span></div>
+              <div class="bottom"><span class="name">Driveway</span><span class="kind">Modal</span></div>
+            </div>
+          </div>
+          <div class="chrome"><i></i><i></i><i></i></div>
+        </div>
+      </div>
+      <h3>Tap to enlarge</h3>
+      <p>A short press opens the same stream in Macro Deck's modal, as large as the client allows.</p>
+    </div>
+  </div>
+
+  <p class="bottom-note"><b>Your own flow wins.</b> A Short Press action you configure runs instead of the default enlarge, and the tile still follows Macro Deck's appearance actions.</p>
+</div>
+</body>
+</html>

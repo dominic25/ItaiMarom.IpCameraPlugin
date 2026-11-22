@@ -1,7 +1,7 @@
 IP Camera
 Copyright (c) 2026 ItaiMarom
 
-Licensed under the MIT License. See LICENSE.
+Licensed under the Apache License, Version 2.0. See LICENSE.
 
 This package redistributes the Macro Deck SDK packages and Serilog under the Apache License 2.0.
 See THIRD-PARTY-NOTICES for the copyright holders and the component list.

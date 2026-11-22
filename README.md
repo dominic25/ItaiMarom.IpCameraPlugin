@@ -1,12 +1,28 @@
-# IP Camera
+<img width="1920" height="1080" alt="IP Camera for Macro Deck 3" src="store/01-hero.png">
+
+# IP Camera Plugin for Macro Deck 3
 
 A Macro Deck 3 plugin that shows live IP camera pictures on a deck widget. It reads the camera on the
 computer that runs Macro Deck and relays the frames to the deck, so a phone or tablet only ever talks
 to Macro Deck.
 
 The plugin was built for the Xiaomi Mi 360 1080p camera, and it accepts any camera that offers an HTTP
-snapshot, an MJPEG stream, or RTSP. Snapshot and MJPEG cameras need nothing else installed; RTSP is
-converted with ffmpeg.
+snapshot, an MJPEG stream, RTSP or ONVIF. Snapshot and MJPEG cameras need nothing else installed; RTSP
+is converted with ffmpeg.
+
+<a href="https://macro-deck.app/store/com.itaimarom.ip-camera">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://assets.macro-deck.app/branding/Open%20in%20the%20Macro%20Deck%20Store%20Badge%20Dark.png">
+    <img alt="Open in the Macro Deck Store" src="https://assets.macro-deck.app/branding/Open%20in%20the%20Macro%20Deck%20Store%20Badge%20Light.png" height="56">
+  </picture>
+</a>
+
+## Screenshots
+
+| | |
+| --- | --- |
+| ![The camera setup dialog with ONVIF discovery and a checked stream](store/02-setup.png) | ![The Xiaomi Mi 360 path through go2rtc](store/03-mi360.png) |
+| ![Fill, Fit, labels and the enlarged view](store/04-widget.png) | ![Supported source types and cameras](store/05-compatibility.png) |
 
 ## What it adds to Macro Deck
 
@@ -188,6 +204,7 @@ src/IpCamera/
   ConfigFlow/                 the camera setup flow
   Actions/                    the full-screen camera action
   Localization/Strings.resx   all user-facing text
+store/                       Store screenshots, listing copy and their build scripts
 ```
 
 ### Publishing
@@ -199,5 +216,5 @@ workflow by publishing a GitHub release. The Store builds and signs the package 
 
 ## Licence
 
-MIT. See [LICENSE](LICENSE), [NOTICE](NOTICE) and [THIRD-PARTY-NOTICES](THIRD-PARTY-NOTICES). ffmpeg
-is not bundled or redistributed; it is used from the host when it is installed.
+Apache-2.0. See [LICENSE](LICENSE), [NOTICE](NOTICE) and [THIRD-PARTY-NOTICES](THIRD-PARTY-NOTICES).
+ffmpeg is not bundled or redistributed; it is used from the host when it is installed.

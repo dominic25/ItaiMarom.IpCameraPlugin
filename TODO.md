@@ -63,6 +63,11 @@ scope, the last three are larger and can wait.
   title, screenshots and icon against the naming and branding rules before submitting. The manifest,
   id, publisher and icon are already compliant; the final Store listing check happens with Publishing.
 
+- [x] **Marketing materials**
+  Five 1920x1080 Store screenshots under `store/`, built from HTML/CSS by `store/build.ps1` and checked
+  by `store/validate.ps1`, plus `store/listing.md` with the Store copy. The README uses the hero image
+  and a screenshot table. The camera scenes are mockups, not real footage.
+
 - [ ] **Publishing**
   Add the GitHub repository and matching publisher to `manifest.json`, add the Store badge to the
   README, push the repository, run the CI and release workflows, and submit through the Creator Portal.
