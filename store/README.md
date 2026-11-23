@@ -5,28 +5,21 @@ the Store gallery renders them in.
 
 | File | Shows |
 | --- | --- |
-| `01-hero.png` | The plugin name, icon, and four camera tiles: snapshot, MJPEG, RTSP and the Mi 360 through go2rtc. |
-| `02-setup.png` | The setup dialog with ONVIF discovery, a stream URL, credentials and the live-frame check. |
-| `03-mi360.png` | The Mi 360 path: camera to go2rtc to the plugin to the deck, and the note about the cloud key. |
-| `04-widget.png` | Fill, Fit, label and colours, and the enlarged modal view. |
-| `05-compatibility.png` | The four source types, cameras that work, and the requirements. |
-
-## Rebuilding
-
-```powershell
-powershell -ExecutionPolicy Bypass -File store/build.ps1
-powershell -ExecutionPolicy Bypass -File store/validate.ps1
-```
-
-The build uses headless Microsoft Edge as the renderer. It is not a project dependency. The HTML in
-`src/` is the source of every image.
+| `01-hero.png` | The deck with two camera widgets, one filling its tile and one fitting the whole frame, both with a label. |
+| `02-setup.png` | The camera setup dialog with a stream URL, source type and the advanced options. |
+| `03-modal.png` | A short press opening the same stream in Macro Deck's modal. |
+| `04-integration.png` | The IP Camera integration page: ready cameras, actions, widget and video stream capabilities. |
+| `05-large-view.png` | A camera filling a folder, edge to edge. |
 
 ## Notes
 
-- The camera pictures are stylized HTML/CSS mockups, not footage from a real camera. No real home,
-  street or person is shown.
+- These are real captures of Macro Deck 3.0.5 running the published plugin, not mockups, drawings or
+  HTML renders.
+- The camera pictures are stock photographs served from a local MJPEG test server. No real home,
+  street, person or user camera appears in them.
+- The frames were captured at 3840x2126 and cropped and scaled to 1920x1080. Photo-heavy frames are
+  palette-compressed to stay under the 1 MB upload limit.
 - The only generated asset in the package is the plugin icon, which the manifest declares.
 - Claims match `README.md`: RTSP needs ffmpeg, the Mi 360 needs go2rtc, and ONVIF discovery is covered
   by protocol tests.
-- Keep the subject in the middle third. The Store thumbnails are small and crop to 16:9.
-- Update these images when the widget or the setup screen changes.
+- Recapture these after a visible UI change, and check them with `store/validate.ps1`.

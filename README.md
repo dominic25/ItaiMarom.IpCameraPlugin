@@ -19,10 +19,12 @@ is converted with ffmpeg.
 
 ## Screenshots
 
+These are captures from Macro Deck 3 with the plugin installed, using a local test stream.
+
 | | |
 | --- | --- |
-| ![The camera setup dialog with ONVIF discovery and a checked stream](store/02-setup.png) | ![The Xiaomi Mi 360 path through go2rtc](store/03-mi360.png) |
-| ![Fill, Fit, labels and the enlarged view](store/04-widget.png) | ![Supported source types and cameras](store/05-compatibility.png) |
+| ![The camera setup dialog with a stream URL and the connection check](store/02-setup.png) | ![A short press opens the camera in Macro Deck's modal](store/03-modal.png) |
+| ![The IP Camera integration page with three ready cameras](store/04-integration.png) | ![A camera filling a folder](store/05-large-view.png) |
 
 ## What it adds to Macro Deck
 
@@ -204,7 +206,7 @@ src/IpCamera/
   ConfigFlow/                 the camera setup flow
   Actions/                    the full-screen camera action
   Localization/Strings.resx   all user-facing text
-store/                       Store screenshots, listing copy and their build scripts
+store/                       Store screenshots, listing copy and their check
 ```
 
 ### Publishing

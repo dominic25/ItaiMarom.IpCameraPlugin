@@ -5,9 +5,9 @@ $store = $PSScriptRoot
 $expected = @(
     "01-hero.png",
     "02-setup.png",
-    "03-mi360.png",
-    "04-widget.png",
-    "05-compatibility.png"
+    "03-modal.png",
+    "04-integration.png",
+    "05-large-view.png"
 )
 
 $failed = $false
