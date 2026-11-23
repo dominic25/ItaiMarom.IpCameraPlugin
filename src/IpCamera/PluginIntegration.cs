@@ -1,3 +1,4 @@
+using System.Text.Json;
 using IpCamera.Actions;
 using IpCamera.Cameras;
 using IpCamera.ConfigFlow;
@@ -44,6 +45,7 @@ internal sealed class PluginIntegration : IPluginIntegration,
 
 	private CameraStreamProvider? _provider;
 	private string? _providerQualifiedId;
+	private TaskCompletionSource<string?> _providerReady = new(TaskCreationOptions.RunContinuationsAsynchronously);
 	private IIntegrationContext? _context;
 	private string? _widgetTypeId;
 	private IReadOnlyList<WidgetTypeDescriptor> _widgetTypes = [];
@@ -96,6 +98,9 @@ internal sealed class PluginIntegration : IPluginIntegration,
 
 	public async Task InitializeAsync(IVideoStreamProviderContext context, CancellationToken cancellationToken = default)
 	{
+		var ready = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+		Interlocked.Exchange(ref _providerReady, ready)?.TrySetResult(null);
+
 		if (_provider is not null)
 		{
 			await _provider.DisposeAsync().ConfigureAwait(false);
@@ -108,12 +113,16 @@ internal sealed class PluginIntegration : IPluginIntegration,
 
 		try
 		{
-			var registration = await context.RegisterProviderAsync(provider, cancellationToken).ConfigureAwait(false);
+			var registration = await HostCalls.RunAsync(
+				() => context.RegisterProviderAsync(provider, cancellationToken),
+				cancellationToken).ConfigureAwait(false);
 			_provider = provider;
 			_providerQualifiedId = string.IsNullOrEmpty(registration.QualifiedId) ? null : registration.QualifiedId;
+			ready.TrySetResult(_providerQualifiedId);
 		}
 		catch
 		{
+			ready.TrySetResult(null);
 			await provider.DisposeAsync().ConfigureAwait(false);
 			throw;
 		}
@@ -131,7 +140,7 @@ internal sealed class PluginIntegration : IPluginIntegration,
 		return _widgetTypes;
 	}
 
-	public Task<IUiSession?> CreateSessionAsync(UiSessionRequest request, CancellationToken cancellationToken)
+	public async Task<IUiSession?> CreateSessionAsync(UiSessionRequest request, CancellationToken cancellationToken)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
 
@@ -144,22 +153,74 @@ internal sealed class PluginIntegration : IPluginIntegration,
 			return Create(surface, CameraWidget.BuildModal(surface, _providerQualifiedId));
 		}
 
-		if (_widgetTypeId is null)
+		var widgetTypeId = _widgetTypeId;
+		if (widgetTypeId is null &&
+			WidgetTypeOf(surface) is { } reported &&
+			IsCameraWidgetType(reported))
 		{
-			return Task.FromResult<IUiSession?>(null);
+			widgetTypeId = reported;
 		}
 
-		if (UiWidgetSurface.IsConfigurationFor(surface, _widgetTypeId))
+		if (widgetTypeId is null)
+		{
+			return null;
+		}
+
+		if (UiWidgetSurface.IsConfigurationFor(surface, widgetTypeId))
 		{
 			return Create(surface, CameraWidget.BuildConfiguration(surface));
 		}
 
-		if (UiWidgetSurface.IsFor(surface, _widgetTypeId))
+		if (UiWidgetSurface.IsFor(surface, widgetTypeId))
 		{
-			return Create(surface, CameraWidget.BuildView(surface, _providerQualifiedId));
+			var providerId = await ResolveProviderIdAsync(cancellationToken).ConfigureAwait(false);
+			return Create(surface, CameraWidget.BuildView(surface, providerId));
 		}
 
-		return Task.FromResult<IUiSession?>(null);
+		return null;
+	}
+
+	private async Task<string?> ResolveProviderIdAsync(CancellationToken cancellationToken)
+	{
+		var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+
+		while (_providerQualifiedId is null)
+		{
+			var remaining = deadline - DateTime.UtcNow;
+			if (remaining <= TimeSpan.Zero)
+			{
+				break;
+			}
+
+			var ready = Volatile.Read(ref _providerReady);
+			var finished = await Task.WhenAny(ready.Task, Task.Delay(remaining, cancellationToken))
+				.ConfigureAwait(false);
+			if (finished != ready.Task)
+			{
+				break;
+			}
+
+			await ready.Task.ConfigureAwait(false);
+		}
+
+		return _providerQualifiedId;
+	}
+
+	private static string? WidgetTypeOf(UiSurface surface)
+	{
+		var key = surface.Kind == UiSurfaceKinds.Config
+			? UiConfigSurfaceAttributes.WidgetType
+			: UiWidgetSurfaceAttributes.WidgetType;
+
+		return surface.Attributes.TryGetValue(key, out var value) && value.ValueKind == JsonValueKind.String
+			? value.GetString()
+			: null;
+	}
+
+	internal static bool IsCameraWidgetType(string? widgetType)
+	{
+		return widgetType is not null &&
+			widgetType.EndsWith("::" + CameraWidget.TypeId, StringComparison.Ordinal);
 	}
 
 	public Task<IReadOnlyList<IntegrationIssue>> GetIssuesAsync(CancellationToken cancellationToken = default)
@@ -204,6 +265,8 @@ internal sealed class PluginIntegration : IPluginIntegration,
 
 	public async Task ShutdownAsync()
 	{
+		_providerReady.TrySetResult(null);
+
 		if (_provider is not null)
 		{
 			await _provider.DisposeAsync().ConfigureAwait(false);
@@ -212,10 +275,10 @@ internal sealed class PluginIntegration : IPluginIntegration,
 		}
 	}
 
-	private static Task<IUiSession?> Create(UiSurface surface, MacroDeck.Ui.Dsl.UiElement root)
+	private static IUiSession Create(UiSurface surface, MacroDeck.Ui.Dsl.UiElement root)
 	{
 		IUiSession session = new ViewSession(new UiView(surface, root));
-		return Task.FromResult<IUiSession?>(session);
+		return session;
 	}
 
 	private async Task RegisterAsync(
@@ -223,7 +286,9 @@ internal sealed class PluginIntegration : IPluginIntegration,
 		WidgetTypeDescriptor descriptor,
 		CancellationToken cancellationToken)
 	{
-		var registration = await context.RegisterWidgetTypeAsync(descriptor, cancellationToken).ConfigureAwait(false);
+		var registration = await HostCalls.RunAsync(
+			() => context.RegisterWidgetTypeAsync(descriptor, cancellationToken),
+			cancellationToken).ConfigureAwait(false);
 		_widgetTypeId = registration.WidgetTypeId;
 	}
 
@@ -260,17 +325,15 @@ internal sealed class PluginIntegration : IPluginIntegration,
 		{
 			var values = new Dictionary<string, string?>(StringComparer.Ordinal)
 			{
-				[CameraSettings.KindKey] = await context.Config.GetStringAsync(entry.Id, CameraSettings.KindKey).ConfigureAwait(false),
-				[CameraSettings.UrlKey] = await context.Config.GetStringAsync(entry.Id, CameraSettings.UrlKey).ConfigureAwait(false),
-				[CameraSettings.UsernameKey] = await context.Config.GetStringAsync(entry.Id, CameraSettings.UsernameKey).ConfigureAwait(false),
-				[CameraSettings.FpsKey] = await context.Config.GetStringAsync(entry.Id, CameraSettings.FpsKey).ConfigureAwait(false),
-				[CameraSettings.MaxWidthKey] = await context.Config.GetStringAsync(entry.Id, CameraSettings.MaxWidthKey).ConfigureAwait(false),
-				[CameraSettings.RtspTransportKey] = await context.Config.GetStringAsync(entry.Id, CameraSettings.RtspTransportKey).ConfigureAwait(false)
+				[CameraSettings.KindKey] = await ReadStringAsync(context.Config, entry.Id, CameraSettings.KindKey).ConfigureAwait(false),
+				[CameraSettings.UrlKey] = await ReadStringAsync(context.Config, entry.Id, CameraSettings.UrlKey).ConfigureAwait(false),
+				[CameraSettings.UsernameKey] = await ReadStringAsync(context.Config, entry.Id, CameraSettings.UsernameKey).ConfigureAwait(false),
+				[CameraSettings.FpsKey] = await ReadStringAsync(context.Config, entry.Id, CameraSettings.FpsKey).ConfigureAwait(false),
+				[CameraSettings.MaxWidthKey] = await ReadStringAsync(context.Config, entry.Id, CameraSettings.MaxWidthKey).ConfigureAwait(false),
+				[CameraSettings.RtspTransportKey] = await ReadStringAsync(context.Config, entry.Id, CameraSettings.RtspTransportKey).ConfigureAwait(false)
 			};
 
-			var password = await context.Config
-				.GetSecretAsync(entry.Id, CameraSettings.PasswordKey)
-				.ConfigureAwait(false);
+			var password = await ReadSecretAsync(context.Config, entry.Id, CameraSettings.PasswordKey).ConfigureAwait(false);
 
 			var camera = CameraDefinition.TryCreate(entry.Id, entry.Title, values, password, out var error);
 			if (camera is null)
@@ -283,5 +346,17 @@ internal sealed class PluginIntegration : IPluginIntegration,
 		}
 
 		return cameras;
+	}
+
+	// The host allows a plugin about twenty callbacks in a burst and refills ten per second. Reading
+	// seven values per camera outruns that at startup with a few cameras, so every call is paced.
+	private static Task<string?> ReadStringAsync(IIntegrationConfig config, Guid entryId, string key)
+	{
+		return HostCalls.RunAsync(() => config.GetStringAsync(entryId, key));
+	}
+
+	private static Task<string?> ReadSecretAsync(IIntegrationConfig config, Guid entryId, string key)
+	{
+		return HostCalls.RunAsync(() => config.GetSecretAsync(entryId, key));
 	}
 }
