@@ -13,8 +13,7 @@ the Store gallery renders them in.
 
 ## Notes
 
-- These are real captures of Macro Deck 3.0.5 running the published plugin, not mockups, drawings or
-  HTML renders.
+- These are real captures of Macro Deck 3.0.5 running the plugin, not mockups, drawings or HTML renders.
 - The camera pictures are stock photographs served from a local MJPEG test server. No real home,
   street, person or user camera appears in them.
 - The frames were captured at 3840x2126 and cropped and scaled to 1920x1080. Photo-heavy frames are
