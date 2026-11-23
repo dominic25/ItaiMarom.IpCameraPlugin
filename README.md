@@ -19,7 +19,8 @@ is converted with ffmpeg.
 
 ## Screenshots
 
-These are captures from Macro Deck 3 with the plugin installed, using a local test stream.
+These are real captures from Macro Deck 3 with the plugin installed, composed into Store slides. The
+camera picture is a local test stream.
 
 | | |
 | --- | --- |

@@ -103,7 +103,7 @@ items.
   `store/listing.md` with the Store copy. The README uses the hero image and a screenshot table. The
   first set were HTML/CSS mockups and the moderator rejected them under Creator Guidelines section 10;
   they were replaced with real captures of Macro Deck 3 with the plugin installed, using local test
-  streams made from stock camera photographs.
+  streams made from stock camera photographs and composed as Store slides.
 
 - [x] **GitHub repository and Store metadata**
   Public repository at https://github.com/dominic25/ItaiMarom.IpCameraPlugin, set in the manifest, with
