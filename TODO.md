@@ -36,15 +36,16 @@ items.
 
 ## Next
 
-- [ ] **Multi-camera widget**
+- [x] **Multi-camera widget**
   Add a grid layout to the camera widget, with two or four cells and a camera picker per cell. Each cell
   is its own video stream session, so one tile can show a small camera wall. Reuse the camera picker,
   the fit setting and the appearance handling; keep the single-camera layout as the default. Test the
   four-cell tree, an empty cell, and the modal on a pressed cell.
   **Pressed-cell modal is blocked on the 3.0.5 SDK**: the short-press action knows the widget, not the
-  cell that was pressed, so a grid can only open the whole widget in the modal until the action context
-  carries the pressed node. The grid itself is still buildable; decide the modal behaviour before
-  starting.
+  cell that was pressed, so the widget opens the first camera in the modal instead. The grid is
+  implemented with `layout` (`single`, `split`, `grid`), `camera2`, `camera3` and `camera4`; the status
+  overlay remains on the single-camera layout. Revisit the per-cell modal when the action context
+  carries the pressed node.
 
 - [ ] **Camera health page**
   Add an integration page that lists every camera with its state, source type, resolution, last frame

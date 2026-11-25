@@ -58,6 +58,33 @@
   <data name="Widgets.Camera.Config.FitContain" xml:space="preserve">
     <value>Fit</value>
   </data>
+  <data name="Widgets.Camera.Config.Layout" xml:space="preserve">
+    <value>Layout</value>
+  </data>
+  <data name="Widgets.Camera.Config.LayoutSingle" xml:space="preserve">
+    <value>One camera</value>
+  </data>
+  <data name="Widgets.Camera.Config.LayoutSplit" xml:space="preserve">
+    <value>Two cameras</value>
+  </data>
+  <data name="Widgets.Camera.Config.LayoutGrid" xml:space="preserve">
+    <value>Four cameras</value>
+  </data>
+  <data name="Widgets.Camera.Config.Camera2" xml:space="preserve">
+    <value>Camera 2</value>
+  </data>
+  <data name="Widgets.Camera.Config.Camera3" xml:space="preserve">
+    <value>Camera 3</value>
+  </data>
+  <data name="Widgets.Camera.Config.Camera4" xml:space="preserve">
+    <value>Camera 4</value>
+  </data>
+  <data name="Widgets.Camera.Config.Camera2Description" xml:space="preserve">
+    <value>Used by the two-camera and four-camera layouts.</value>
+  </data>
+  <data name="Widgets.Camera.Config.Camera34Description" xml:space="preserve">
+    <value>Used by the four-camera layout.</value>
+  </data>
   <data name="Widgets.Camera.Config.Overlay" xml:space="preserve">
     <value>Status overlay</value>
   </data>

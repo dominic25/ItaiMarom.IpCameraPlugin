@@ -106,6 +106,80 @@ public sealed class CameraWidgetTests
 	}
 
 	[Test]
+	public void The_split_layout_draws_two_streams()
+	{
+		var surface = Surface(new
+		{
+			camera = "camera-1",
+			camera2 = "camera-2",
+			layout = CameraWidget.LayoutSplit
+		});
+
+		using var view = new UiView(surface, CameraWidget.BuildView(surface, ProviderId));
+
+		Assert.That(CountType(view.Tree.Root, "macrodeck.video-stream"), Is.EqualTo(2));
+	}
+
+	[Test]
+	public void The_grid_layout_draws_four_streams()
+	{
+		var surface = Surface(new
+		{
+			camera = "camera-1",
+			camera2 = "camera-2",
+			camera3 = "camera-3",
+			camera4 = "camera-4",
+			layout = CameraWidget.LayoutGrid
+		});
+
+		using var view = new UiView(surface, CameraWidget.BuildView(surface, ProviderId));
+
+		Assert.That(CountType(view.Tree.Root, "macrodeck.video-stream"), Is.EqualTo(4));
+	}
+
+	[Test]
+	public void An_empty_grid_cell_draws_the_hint_instead_of_a_stream()
+	{
+		var surface = Surface(new
+		{
+			camera = "camera-1",
+			camera2 = "camera-2",
+			camera3 = "camera-3",
+			layout = CameraWidget.LayoutGrid
+		});
+
+		using var view = new UiView(surface, CameraWidget.BuildView(surface, ProviderId));
+
+		Assert.That(CountType(view.Tree.Root, "macrodeck.video-stream"), Is.EqualTo(3));
+		Assert.That(ContainsId(view.Tree.Root, "cell-3-empty"), Is.True);
+	}
+
+	[Test]
+	public void The_configuration_offers_the_layout_and_extra_cameras()
+	{
+		var surface = new UiSurface
+		{
+			Kind = UiSurfaceKinds.Config,
+			SessionMode = UiSessionModes.Exclusive,
+			Attributes = new Dictionary<string, JsonElement>(StringComparer.Ordinal)
+			{
+				["entryPoint"] = JsonSerializer.SerializeToElement("widget-config"),
+				["widgetData"] = JsonSerializer.SerializeToElement(new { camera = "camera-1", layout = "single" })
+			}
+		};
+
+		using var view = new UiView(surface, CameraWidget.BuildConfiguration(surface));
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(ContainsId(view.Tree.Root, "layout"), Is.True);
+			Assert.That(ContainsId(view.Tree.Root, "camera2"), Is.True);
+			Assert.That(ContainsId(view.Tree.Root, "camera3"), Is.True);
+			Assert.That(ContainsId(view.Tree.Root, "camera4"), Is.True);
+		});
+	}
+
+	[Test]
 	public void The_status_overlay_is_drawn_when_enabled()
 	{
 		var surface = Surface(new { camera = "camera-1", overlay = true });
@@ -214,6 +288,12 @@ public sealed class CameraWidgetTests
 	private static bool Contains(UiNode node, string type)
 	{
 		return node.Type == type || node.Children.Any(child => Contains(child, type));
+	}
+
+	private static int CountType(UiNode node, string type)
+	{
+		return (node.Type == type ? 1 : 0) +
+			node.Children.Sum(child => CountType(child, type));
 	}
 
 	private static bool ContainsId(UiNode node, string id)

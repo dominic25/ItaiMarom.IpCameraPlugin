@@ -29,9 +29,10 @@ camera picture is a local test stream.
 
 ## What it adds to Macro Deck
 
-- **A Camera widget**: pick one of the configured cameras, choose whether the picture fills the tile or
-  fits inside it, and give it a label, background and colours. A short press opens the camera in a
-  modal as large as Macro Deck's fixed dialog box allows.
+- **A Camera widget**: one, two or four cameras on the same tile. Pick a camera per cell, choose whether
+  the pictures fill their cell or fit inside it, and give the widget a label, background and colours. A
+  short press opens the first camera in a modal as large as Macro Deck's fixed dialog box allows; the
+  status overlay is available on the single-camera layout.
 - **A video stream provider**: every configured camera is listed under Source in any widget or action
   that can show a video stream, not only in this plugin's own widget.
 - **A camera setup flow**: one Macro Deck configuration entry per camera. The flow fetches one frame

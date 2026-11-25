@@ -29,6 +29,14 @@ internal static class CameraWidget
 	public const string FitKey = "fit";
 	public const string OverlayKey = "overlay";
 	public const string OverlayBackgroundKey = "overlayBackground";
+	public const string LayoutKey = "layout";
+	public const string Camera2Key = "camera2";
+	public const string Camera3Key = "camera3";
+	public const string Camera4Key = "camera4";
+
+	public const string LayoutSingle = "single";
+	public const string LayoutSplit = "split";
+	public const string LayoutGrid = "grid";
 
 	public const string FitContain = "contain";
 	public const string FitCover = "cover";
@@ -38,6 +46,10 @@ internal static class CameraWidget
 		  "type": "object",
 		  "properties": {
 		    "camera": { "type": "string" },
+		    "camera2": { "type": "string" },
+		    "camera3": { "type": "string" },
+		    "camera4": { "type": "string" },
+		    "layout": { "type": "string" },
 		    "fit": { "type": "string" },
 		    "overlay": { "type": "boolean" },
 		    "overlayBackground": { "type": "number" },
@@ -61,7 +73,7 @@ internal static class CameraWidget
 			TypeId,
 			Strings.Widgets.Camera.Name(),
 			Strings.Widgets.Camera.Description(),
-			DefaultData: $$"""{"{{CameraKey}}":"","{{FitKey}}":"{{FitCover}}","{{OverlayKey}}":true,"{{OverlayBackgroundKey}}":0}""",
+			DefaultData: $$"""{"{{CameraKey}}":"","{{FitKey}}":"{{FitCover}}","{{OverlayKey}}":true,"{{OverlayBackgroundKey}}":0,"{{LayoutKey}}":"{{LayoutSingle}}"}""",
 			DataSchema: DataSchema,
 			HasConfiguration: true)
 		{
@@ -100,15 +112,34 @@ internal static class CameraWidget
 
 		var appearance = UiWidgetAppearance.Read(data);
 		var fit = ReadString(data, FitKey) == FitContain ? FitContain : FitCover;
+		var layout = ReadLayout(data);
 
-		UiElement content = new UiVideoStream
+		UiElement content;
+		CameraOverlay? overlay = null;
+
+		if (layout is LayoutSplit or LayoutGrid)
 		{
-			Key = "stream",
-			Stream = UiValue.Of(new UiVideoStreamReference { Provider = providerId, Id = cameraId }),
-			Fit = UiValue.Of(fit),
-			Fill = true,
-			Fallback = Placeholder(Strings.Widgets.Camera.UpdateRequired())
-		};
+			content = BuildMultiContent(layout, data, providerId, fit);
+		}
+		else
+		{
+			content = new UiVideoStream
+			{
+				Key = "stream",
+				Stream = UiValue.Of(new UiVideoStreamReference { Provider = providerId, Id = cameraId }),
+				Fit = UiValue.Of(fit),
+				Fill = true,
+				Fallback = Placeholder(Strings.Widgets.Camera.UpdateRequired())
+			};
+
+			if (ReadBool(data, OverlayKey) && findStream is not null)
+			{
+				overlay = new CameraOverlay(
+					() => findStream(cameraId),
+					Math.Clamp(ReadNumber(data, OverlayBackgroundKey, 0), 0, 100));
+				overlay.Update();
+			}
+		}
 
 		var children = new List<UiElement> { content };
 
@@ -117,13 +148,8 @@ internal static class CameraWidget
 			children.Add(label);
 		}
 
-		CameraOverlay? overlay = null;
-		if (ReadBool(data, OverlayKey) && findStream is not null)
+		if (overlay is not null)
 		{
-			overlay = new CameraOverlay(
-				() => findStream(cameraId),
-				Math.Clamp(ReadNumber(data, OverlayBackgroundKey, 0), 0, 100));
-			overlay.Update();
 			children.Add(overlay.Build());
 		}
 
@@ -146,6 +172,89 @@ internal static class CameraWidget
 		};
 
 		return new CameraWidgetView(root, overlay);
+	}
+
+	private static UiStack BuildMultiContent(
+		string layout,
+		JsonElement data,
+		string providerId,
+		string fit)
+	{
+		string?[] cameras = layout == LayoutSplit
+			?
+			[
+				ReadString(data, CameraKey),
+				ReadString(data, Camera2Key)
+			]
+			:
+			[
+				ReadString(data, CameraKey),
+				ReadString(data, Camera2Key),
+				ReadString(data, Camera3Key),
+				ReadString(data, Camera4Key)
+			];
+
+		var cells = cameras
+			.Select((camera, index) => BuildCell(camera, providerId, fit, index))
+			.ToList();
+
+		if (layout == LayoutSplit)
+		{
+			return new UiStack
+			{
+				Key = "split",
+				Direction = UiValue.Of(UiComponentDirections.Horizontal),
+				Fill = true,
+				Gap = 0.01,
+				Children = cells
+			};
+		}
+
+		return new UiStack
+		{
+			Key = "grid",
+			Direction = UiValue.Of(UiComponentDirections.Vertical),
+			Fill = true,
+			Gap = 0.01,
+			Children =
+			[
+				Row("grid-row-1", cells[0], cells[1]),
+				Row("grid-row-2", cells[2], cells[3])
+			]
+		};
+	}
+
+	private static UiStack Row(string key, UiElement left, UiElement right)
+	{
+		return new UiStack
+		{
+			Key = key,
+			Direction = UiValue.Of(UiComponentDirections.Horizontal),
+			Fill = true,
+			Gap = 0.01,
+			Children = [left, right]
+		};
+	}
+
+	private static UiElement BuildCell(string? cameraId, string providerId, string fit, int index)
+	{
+		if (string.IsNullOrEmpty(cameraId))
+		{
+			return Placeholder(
+				Strings.Widgets.Camera.NotConfigured(),
+				$"cell-{index}-empty");
+		}
+
+		return new UiVideoStream
+		{
+			Key = $"cell-{index}",
+			Stream = UiValue.Of(new UiVideoStreamReference { Provider = providerId, Id = cameraId }),
+			Fit = UiValue.Of(fit),
+			Fill = true,
+			Fallback = Placeholder(
+				Strings.Widgets.Camera.UpdateRequired(),
+				$"cell-{index}-fallback")
+		};
 	}
 
 	public static UiElement BuildModal(UiSurface surface, string? providerId)
@@ -180,7 +289,11 @@ internal static class CameraWidget
 	public static UiElement BuildConfiguration(UiSurface surface)
 	{
 		var data = UiWidgetSurface.Data(surface);
+		var layout = new UiState<string>(ReadLayout(data));
 		var camera = new UiState<string>(ReadString(data, CameraKey) ?? string.Empty);
+		var camera2 = new UiState<string>(ReadString(data, Camera2Key) ?? string.Empty);
+		var camera3 = new UiState<string>(ReadString(data, Camera3Key) ?? string.Empty);
+		var camera4 = new UiState<string>(ReadString(data, Camera4Key) ?? string.Empty);
 		var fit = new UiState<string>(ReadString(data, FitKey) == FitContain ? FitContain : FitCover);
 		var overlay = new UiState<bool>(ReadBool(data, OverlayKey));
 		var overlayBackground = new UiState<double>(
@@ -200,6 +313,19 @@ internal static class CameraWidget
 				Key = "properties",
 				Children =
 				[
+					new UiChoiceInput
+					{
+						Key = LayoutKey,
+						Label = Strings.Widgets.Camera.Config.Layout(),
+						Segmented = UiValue.Of(true),
+						Options = UiValue.Of<IReadOnlyList<UiOption>>(
+						[
+							new UiOption { Value = LayoutSingle, Label = Strings.Widgets.Camera.Config.LayoutSingle() },
+							new UiOption { Value = LayoutSplit, Label = Strings.Widgets.Camera.Config.LayoutSplit() },
+							new UiOption { Value = LayoutGrid, Label = Strings.Widgets.Camera.Config.LayoutGrid() }
+						]),
+						Binding = Bind.To(layout)
+					},
 					new UiIntegrationPickerInput
 					{
 						Key = CameraKey,
@@ -208,6 +334,33 @@ internal static class CameraWidget
 						Capability = UiValue.Of("video-stream-provider"),
 						ConfigurationEntries = UiValue.Of(true),
 						Binding = Bind.To(camera)
+					},
+					new UiIntegrationPickerInput
+					{
+						Key = Camera2Key,
+						Label = Strings.Widgets.Camera.Config.Camera2(),
+						Description = Strings.Widgets.Camera.Config.Camera2Description(),
+						Capability = UiValue.Of("video-stream-provider"),
+						ConfigurationEntries = UiValue.Of(true),
+						Binding = Bind.To(camera2)
+					},
+					new UiIntegrationPickerInput
+					{
+						Key = Camera3Key,
+						Label = Strings.Widgets.Camera.Config.Camera3(),
+						Description = Strings.Widgets.Camera.Config.Camera34Description(),
+						Capability = UiValue.Of("video-stream-provider"),
+						ConfigurationEntries = UiValue.Of(true),
+						Binding = Bind.To(camera3)
+					},
+					new UiIntegrationPickerInput
+					{
+						Key = Camera4Key,
+						Label = Strings.Widgets.Camera.Config.Camera4(),
+						Description = Strings.Widgets.Camera.Config.Camera34Description(),
+						Capability = UiValue.Of("video-stream-provider"),
+						ConfigurationEntries = UiValue.Of(true),
+						Binding = Bind.To(camera4)
 					},
 					new UiChoiceInput
 					{
@@ -304,11 +457,12 @@ internal static class CameraWidget
 		};
 	}
 
-	private static UiStack Placeholder(MacroDeck.Localization.LocalizedText hint)
+	private static UiStack Placeholder(MacroDeck.Localization.LocalizedText hint, string key = "placeholder")
 	{
 		return new UiStack
 		{
-			Key = "placeholder",
+			Key = key,
+			Fill = true,
 			Justify = UiValue.Of(UiComponentJustify.Center),
 			Align = UiValue.Of(UiComponentAlignments.Center),
 			Padding = 0.06,
@@ -353,6 +507,16 @@ internal static class CameraWidget
 			value.TryGetDouble(out var number)
 				? number
 				: fallback;
+	}
+
+	private static string ReadLayout(JsonElement data)
+	{
+		return ReadString(data, LayoutKey) switch
+		{
+			LayoutSplit => LayoutSplit,
+			LayoutGrid => LayoutGrid,
+			_ => LayoutSingle
+		};
 	}
 }
 
