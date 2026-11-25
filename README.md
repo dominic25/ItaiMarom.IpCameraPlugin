@@ -47,7 +47,7 @@ camera picture is a local test stream.
 - **A Save snapshot action**: writes the pressed camera's current picture as a JPEG. The folder is set
   per action; empty means `Pictures\IP Camera`.
 - **A camera wall folder view**: replace a folder's widget grid with one camera or up to four in a
-  configurable wall. Pick it in the folder's settings; Macro Deck keeps its own back button.
+  configurable wall. Pick it in the folder's settings; see [Camera wall](#camera-wall).
 - **Camera controls**: Move left, Move right, Move up, Move down and Stop actions for pan and tilt, plus
   Night vision auto/on/off. Each action can name its camera, so a plain button controls a camera that
   has no camera tile; left empty it controls the camera of the pressed widget. ONVIF cameras use
@@ -106,6 +106,43 @@ The exact path is model specific. These are the usual shapes:
 | Reolink | `http://<ip>/cgi-bin/api.cgi?cmd=Snap&channel=0` | | `rtsp://<ip>:554/h264Preview_01_main` |
 | TP-Link Tapo | | | `rtsp://<ip>:554/stream1` (needs a camera account) |
 | Xiaomi Mi 360 1080p | | see below | see below |
+
+## Camera wall
+
+A camera wall is a **folder view**, not a widget. It replaces the folder's widget grid with one to four
+cameras drawn edge to edge, so the pictures use the whole deck area without tile borders, gaps or
+per-widget chrome. Macro Deck keeps its own folder navigation and back button.
+
+Create one like this:
+
+1. In the **Deck** view, open the folder you want, or create one with **New Folder** in the folder list.
+2. Open the folder's view menu: use **Change folder view** in the folder header, or right-click the
+   folder in the folder list and choose **Change view**.
+3. Choose **Camera wall**. If the entry is missing, the IP Camera plugin is disabled.
+4. Press **Configuration** and choose:
+   - **Camera 1** to **Camera 4**: any slot you leave empty is skipped.
+   - **Columns**: **One** or **Two**.
+   - **Picture size**: **Fill** crops the picture to its cell, **Fit** shows the whole picture with
+     black bars.
+5. Save. Macro Deck reloads the folder with the wall.
+
+How the chosen cameras are laid out:
+
+| Cameras | Columns: One | Columns: Two |
+| --- | --- | --- |
+| 1 | fills the folder | fills the folder |
+| 2 | stacked | side by side |
+| 3 | stacked | two rows, the last one half width |
+| 4 | stacked | 2 x 2 |
+
+A single camera always fills the folder, which is the quickest way to give one camera a whole page. The
+wall has no widgets of its own, so pressing a camera does not open the modal and there is nothing to
+configure per cell; it is a display.
+
+The folder's widgets are not deleted when you switch views. While the wall is active they are hidden,
+and switching back to **Widget Grid** in the same menu brings them back. The wall uses the plugin's video
+stream provider, so one producer per camera is still shared by every cell that shows that camera. An empty
+wall shows "Choose cameras in the folder settings" until at least one camera is picked.
 
 ## Xiaomi Mi 360 1080p
 
@@ -179,7 +216,8 @@ camera --HTTP/RTSP--> plugin (one producer per camera) --multipart MJPEG--> 127.
   tests. A real ONVIF camera has not been used yet to verify every vendor's dialect.
 - HTTP digest authentication is not supported, only basic. Use a local restreamer such as go2rtc if
   the camera insists on digest.
-- No PTZ, no talk-back, no recordings, no motion notifications. It only displays a live picture.
+- No talk-back, no recordings and no motion notifications. Camera controls are limited to the move, stop
+  and night vision actions above.
 - The picture is polled or streamed at the configured rate; it is not a 30 fps video. At 5 fps a deck
   tile looks live, and the camera stays available for its own app and recordings.
 
