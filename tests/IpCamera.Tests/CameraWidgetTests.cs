@@ -1,6 +1,7 @@
 using System.Text.Json;
 using IpCamera.Actions;
 using IpCamera.Widgets;
+using MacroDeck.Sdk.VideoStreams;
 using MacroDeck.Ui.Model.Nodes;
 using MacroDeck.Ui.Model.Surfaces;
 using MacroDeck.Ui.Runtime;
@@ -79,6 +80,72 @@ public sealed class CameraWidgetTests
 		using var view = new UiView(surface, CameraWidget.BuildConfiguration(surface));
 
 		Assert.That(view.Tree.Root.Type, Is.EqualTo("widget-configuration"));
+		Assert.That(ContainsId(view.Tree.Root, "overlay"), Is.True);
+	}
+
+	[Test]
+	public void The_status_overlay_is_drawn_when_enabled()
+	{
+		var surface = Surface(new { camera = "camera-1", overlay = true });
+
+		var view = CameraWidget.BuildView(surface, ProviderId, _ => null);
+		using var ui = new UiView(surface, view.Root);
+
+		Assert.That(view.Overlay, Is.Not.Null);
+		Assert.That(ContainsId(ui.Tree.Root, "status-text"), Is.True);
+	}
+
+	[Test]
+	public void The_status_overlay_is_off_by_default()
+	{
+		var surface = Surface(new { camera = "camera-1" });
+
+		var view = CameraWidget.BuildView(surface, ProviderId, _ => null);
+		using var ui = new UiView(surface, view.Root);
+
+		Assert.That(view.Overlay, Is.Null);
+		Assert.That(ContainsId(ui.Tree.Root, "status-text"), Is.False);
+	}
+
+	[Test]
+	public void The_overlay_says_reconnecting_after_a_failure()
+	{
+		var (text, color) = CameraOverlay.Describe(
+			VideoStreamState.Disconnected,
+			true,
+			DateTimeOffset.UtcNow.AddSeconds(-30),
+			DateTimeOffset.UtcNow);
+
+		Assert.That(text.Key.Name, Is.EqualTo("Widgets.Camera.Overlay.Reconnecting"));
+		Assert.That(color, Is.EqualTo(CameraOverlay.PendingColor));
+	}
+
+	[Test]
+	public void The_overlay_says_connecting_before_a_frame()
+	{
+		var (text, color) = CameraOverlay.Describe(
+			VideoStreamState.Connected,
+			false,
+			null,
+			DateTimeOffset.UtcNow);
+
+		Assert.That(text.Key.Name, Is.EqualTo("Widgets.Camera.Overlay.Connecting"));
+		Assert.That(color, Is.EqualTo(CameraOverlay.PendingColor));
+	}
+
+	[Test]
+	public void The_overlay_reports_the_age_of_the_last_frame()
+	{
+		var now = DateTimeOffset.UtcNow;
+		var (text, color) = CameraOverlay.Describe(
+			VideoStreamState.Connected,
+			false,
+			now.AddSeconds(-12),
+			now);
+
+		Assert.That(text.Key.Name, Is.EqualTo("Widgets.Camera.Overlay.LiveSeconds"));
+		Assert.That(text.Arguments.ContainsKey("seconds"), Is.True);
+		Assert.That(color, Is.EqualTo(CameraOverlay.LiveColor));
 	}
 
 	[Test]
@@ -112,6 +179,12 @@ public sealed class CameraWidgetTests
 	private static bool Contains(UiNode node, string type)
 	{
 		return node.Type == type || node.Children.Any(child => Contains(child, type));
+	}
+
+	private static bool ContainsId(UiNode node, string id)
+	{
+		return node.Id.EndsWith(id, StringComparison.Ordinal) ||
+			node.Children.Any(child => ContainsId(child, id));
 	}
 
 	private static UiSurface Surface(object data)	{

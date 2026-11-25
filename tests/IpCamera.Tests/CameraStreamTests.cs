@@ -42,6 +42,26 @@ public sealed class CameraStreamTests
 	}
 
 	[Test]
+	public async Task The_last_frame_time_is_kept_and_cleared_by_a_restart()
+	{
+		await using var stream = new CameraStream(
+			Camera(),
+			_ => new DelayedSource(JpegTests.Frame(), TimeSpan.FromMilliseconds(50)),
+			_logger);
+
+		Assert.That(stream.LastFrameAt, Is.Null);
+
+		var primed = await stream.PrimeAsync(TimeSpan.FromSeconds(3), CancellationToken.None);
+
+		Assert.That(primed, Is.True);
+		Assert.That(stream.LastFrameAt, Is.Not.Null);
+
+		await stream.RestartAsync();
+
+		Assert.That(stream.LastFrameAt, Is.Null);
+	}
+
+	[Test]
 	public async Task Priming_reports_a_source_that_fails()
 	{
 		await using var stream = new CameraStream(

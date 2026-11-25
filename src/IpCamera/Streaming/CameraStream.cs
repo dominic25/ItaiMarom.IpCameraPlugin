@@ -30,6 +30,7 @@ internal sealed class CameraStream : IFrameStream, IAsyncDisposable
 	private CancellationTokenSource? _idleStop;
 	private byte[]? _currentFrame;
 	private long _lastFrameTicks;
+	private DateTimeOffset? _lastFrameAt;
 	private VideoStreamState _state = VideoStreamState.Disconnected;
 	private bool _hasFailed;
 	private int? _width;
@@ -77,6 +78,17 @@ internal sealed class CameraStream : IFrameStream, IAsyncDisposable
 			lock (_gate)
 			{
 				return _hasFailed;
+			}
+		}
+	}
+
+	public DateTimeOffset? LastFrameAt
+	{
+		get
+		{
+			lock (_gate)
+			{
+				return _lastFrameAt;
 			}
 		}
 	}
@@ -218,6 +230,7 @@ internal sealed class CameraStream : IFrameStream, IAsyncDisposable
 			_pump = null;
 			_run = null;
 			_currentFrame = null;
+			_lastFrameAt = null;
 		}
 
 		if (run is not null)
@@ -320,6 +333,7 @@ internal sealed class CameraStream : IFrameStream, IAsyncDisposable
 		{
 			_currentFrame = frame;
 			_lastFrameTicks = Environment.TickCount64;
+			_lastFrameAt = DateTimeOffset.UtcNow;
 
 			if (JpegInfo.TryReadSize(frame, out var width, out var height))
 			{
@@ -450,6 +464,7 @@ internal sealed class CameraStream : IFrameStream, IAsyncDisposable
 			_pump = null;
 			_run = null;
 			_currentFrame = null;
+			_lastFrameAt = null;
 			_hasFailed = false;
 			resume = _subscribers.Count > 0 && !_disposed;
 		}

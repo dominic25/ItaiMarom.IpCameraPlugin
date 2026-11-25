@@ -1,6 +1,10 @@
+using System.Globalization;
 using System.Text.Json;
 using IpCamera.Actions;
+using IpCamera.Streaming;
+using MacroDeck.Localization;
 using MacroDeck.Sdk.Ui;
+using MacroDeck.Sdk.VideoStreams;
 using MacroDeck.Sdk.Widgets;
 using MacroDeck.Ui.Config;
 using MacroDeck.Ui.Config.Options;
@@ -23,6 +27,7 @@ internal static class CameraWidget
 
 	public const string CameraKey = "camera";
 	public const string FitKey = "fit";
+	public const string OverlayKey = "overlay";
 
 	public const string FitContain = "contain";
 	public const string FitCover = "cover";
@@ -33,6 +38,7 @@ internal static class CameraWidget
 		  "properties": {
 		    "camera": { "type": "string" },
 		    "fit": { "type": "string" },
+		    "overlay": { "type": "boolean" },
 		    "flows": { "type": "array" },
 		    "backgroundColor": { "type": "string" },
 		    "label": { "type": "string" },
@@ -53,7 +59,7 @@ internal static class CameraWidget
 			TypeId,
 			Strings.Widgets.Camera.Name(),
 			Strings.Widgets.Camera.Description(),
-			DefaultData: $$"""{"{{CameraKey}}":"","{{FitKey}}":"{{FitCover}}"}""",
+			DefaultData: $$"""{"{{CameraKey}}":"","{{FitKey}}":"{{FitCover}}","{{OverlayKey}}":true}""",
 			DataSchema: DataSchema,
 			HasConfiguration: true)
 		{
@@ -72,6 +78,14 @@ internal static class CameraWidget
 
 	public static UiElement BuildView(UiSurface surface, string? providerId)
 	{
+		return BuildView(surface, providerId, null).Root;
+	}
+
+	public static CameraWidgetView BuildView(
+		UiSurface surface,
+		string? providerId,
+		Func<string, IFrameStream?>? findStream)
+	{
 		var data = UiWidgetSurface.Data(surface);
 		var cameraId = ReadString(data, CameraKey);
 
@@ -79,7 +93,7 @@ internal static class CameraWidget
 			string.IsNullOrEmpty(providerId) ||
 			string.IsNullOrEmpty(cameraId))
 		{
-			return Placeholder(Strings.Widgets.Camera.NotConfigured());
+			return new CameraWidgetView(Placeholder(Strings.Widgets.Camera.NotConfigured()), null);
 		}
 
 		var appearance = UiWidgetAppearance.Read(data);
@@ -94,11 +108,22 @@ internal static class CameraWidget
 			Fallback = Placeholder(Strings.Widgets.Camera.UpdateRequired())
 		};
 
-		UiElement[] children = BuildLabel(appearance) is { } label
-			? [content, label]
-			: [content];
+		var children = new List<UiElement> { content };
 
-		return new UiStack
+		if (BuildLabel(appearance) is { } label)
+		{
+			children.Add(label);
+		}
+
+		CameraOverlay? overlay = null;
+		if (ReadBool(data, OverlayKey) && findStream is not null)
+		{
+			overlay = new CameraOverlay(() => findStream(cameraId));
+			overlay.Update();
+			children.Add(overlay.Build());
+		}
+
+		var root = new UiStack
 		{
 			Key = "root",
 			Fill = true,
@@ -115,6 +140,8 @@ internal static class CameraWidget
 				}
 			]
 		};
+
+		return new CameraWidgetView(root, overlay);
 	}
 
 	public static UiElement BuildModal(UiSurface surface, string? providerId)
@@ -151,6 +178,7 @@ internal static class CameraWidget
 		var data = UiWidgetSurface.Data(surface);
 		var camera = new UiState<string>(ReadString(data, CameraKey) ?? string.Empty);
 		var fit = new UiState<string>(ReadString(data, FitKey) == FitContain ? FitContain : FitCover);
+		var overlay = new UiState<bool>(ReadBool(data, OverlayKey));
 		var flows = new UiState<JsonElement>(
 			data.ValueKind == JsonValueKind.Object &&
 			data.TryGetProperty("flows", out var stored) &&
@@ -186,6 +214,13 @@ internal static class CameraWidget
 							new UiOption { Value = FitContain, Label = Strings.Widgets.Camera.Config.FitContain() }
 						]),
 						Binding = Bind.To(fit)
+					},
+					new UiBooleanInput
+					{
+						Key = OverlayKey,
+						Label = Strings.Widgets.Camera.Config.Overlay(),
+						Description = Strings.Widgets.Camera.Config.OverlayDescription(),
+						Binding = Bind.To(overlay)
 					},
 					UiWidgetAppearance.Section(data, UiWidgetAppearanceFields.All)
 				]
@@ -285,6 +320,134 @@ internal static class CameraWidget
 				? value.GetString()
 				: null;
 	}
+
+	private static bool ReadBool(JsonElement data, string key)
+	{
+		return data.ValueKind == JsonValueKind.Object &&
+			data.TryGetProperty(key, out var value) &&
+			value.ValueKind == JsonValueKind.True;
+	}
+}
+
+/// <summary>The widget tree plus the live overlay a session ticks, when the overlay is enabled.</summary>
+internal sealed record CameraWidgetView(UiElement Root, CameraOverlay? Overlay);
+
+/// <summary>The small status pill drawn over the picture: a live dot and the age of the last frame.</summary>
+internal sealed class CameraOverlay(Func<IFrameStream?> findStream)
+{
+	public const string LiveColor = "#22c55e";
+	public const string PendingColor = "#f59e0b";
+
+	private readonly UiState<LocalizedString> _text = new(Strings.Widgets.Camera.Overlay.Connecting());
+	private readonly UiState<string> _color = new(PendingColor);
+
+	public void Update()
+	{
+		var stream = findStream();
+		var (text, color) = Describe(
+			stream?.State ?? VideoStreamState.Disconnected,
+			stream?.HasFailed ?? false,
+			stream?.LastFrameAt,
+			DateTimeOffset.UtcNow);
+
+		_text.Set(text);
+		_color.Set(color);
+	}
+
+	public UiElement Build()
+	{
+		return new UiStack
+		{
+			Key = "status-overlay",
+			Fill = true,
+			Justify = UiValue.Of(UiComponentJustify.Start),
+			Align = UiValue.Of(UiComponentAlignments.Start),
+			Padding = 0.035,
+			Children =
+			[
+				new UiStack
+				{
+					Key = "status-pill",
+					Direction = UiValue.Of(UiComponentDirections.Horizontal),
+					Align = UiValue.Of(UiComponentAlignments.Center),
+					Gap = 0.012,
+					Padding = 0.022,
+					Background = UiValue.Of("#000000a8"),
+					Children =
+					[
+						new UiTextRun
+						{
+							Key = "status-dot",
+							Text = "●",
+							Size = 0.04,
+							MinSize = 0.03,
+							Color = UiValue.From(() => _color.Value),
+							Align = UiValue.Of(UiComponentAlignments.Center),
+							MaxLines = 1
+						},
+						new UiTextRun
+						{
+							Key = "status-text",
+							Text = UiText.FromLocalized(() => _text.Value),
+							Size = 0.038,
+							MinSize = 0.028,
+							Color = UiValue.Of("#e8eef6"),
+							MaxLines = 1
+						}
+					]
+				}
+			]
+		};
+	}
+
+	internal static (LocalizedString Text, string Color) Describe(
+		VideoStreamState state,
+		bool hasFailed,
+		DateTimeOffset? lastFrameAt,
+		DateTimeOffset now)
+	{
+		if (hasFailed)
+		{
+			return (Strings.Widgets.Camera.Overlay.Reconnecting(), PendingColor);
+		}
+
+		if (state != VideoStreamState.Connected || lastFrameAt is null)
+		{
+			return (Strings.Widgets.Camera.Overlay.Connecting(), PendingColor);
+		}
+
+		var age = now - lastFrameAt.Value;
+		if (age < TimeSpan.Zero)
+		{
+			age = TimeSpan.Zero;
+		}
+
+		if (age < TimeSpan.FromSeconds(1))
+		{
+			return (Strings.Widgets.Camera.Overlay.Live(), LiveColor);
+		}
+
+		if (age < TimeSpan.FromMinutes(1))
+		{
+			return (
+				Strings.Widgets.Camera.Overlay.LiveSeconds(
+					LocalizedText.FromLiteral(((int)age.TotalSeconds).ToString(CultureInfo.InvariantCulture))),
+				LiveColor);
+		}
+
+		if (age < TimeSpan.FromHours(1))
+		{
+			return (
+				Strings.Widgets.Camera.Overlay.LiveMinutes(
+					LocalizedText.FromLiteral(((int)age.TotalMinutes).ToString(CultureInfo.InvariantCulture))),
+				LiveColor);
+		}
+
+		return (
+			Strings.Widgets.Camera.Overlay.LiveHours(
+				LocalizedText.FromLiteral(((int)age.TotalHours).ToString(CultureInfo.InvariantCulture))),
+			LiveColor);
+	}
 }
 
 /// <summary>
@@ -294,12 +457,36 @@ internal static class CameraWidget
 internal sealed class ViewSession : IUiSession
 {
 	private readonly UiView _view;
+	private readonly CancellationTokenSource? _tickCancellation;
+	private readonly Task? _tickTask;
 
-	public ViewSession(UiView view)
+	public ViewSession(UiView view, Action? tick = null)
 	{
 		_view = view;
 		_view.Changed += OnChanged;
 		_view.HandlerFaulted += OnHandlerFaulted;
+
+		if (tick is not null)
+		{
+			_tickCancellation = new CancellationTokenSource();
+			_tickTask = RunTickAsync(tick, _tickCancellation.Token);
+		}
+	}
+
+	private static async Task RunTickAsync(Action tick, CancellationToken cancellationToken)
+	{
+		using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+
+		try
+		{
+			while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
+			{
+				tick();
+			}
+		}
+		catch (OperationCanceledException)
+		{
+		}
 	}
 
 	public event EventHandler? Changed;
@@ -327,12 +514,30 @@ internal sealed class ViewSession : IUiSession
 		_view.Dispatch(uiEvent);
 	}
 
-	public ValueTask DisposeAsync()
+	public async ValueTask DisposeAsync()
 	{
 		_view.Changed -= OnChanged;
 		_view.HandlerFaulted -= OnHandlerFaulted;
+
+		if (_tickCancellation is not null)
+		{
+			await _tickCancellation.CancelAsync().ConfigureAwait(false);
+
+			if (_tickTask is not null)
+			{
+				try
+				{
+					await _tickTask.ConfigureAwait(false);
+				}
+				catch (OperationCanceledException)
+				{
+				}
+			}
+
+			_tickCancellation.Dispose();
+		}
+
 		_view.Dispose();
-		return ValueTask.CompletedTask;
 	}
 
 	private void OnChanged(object? sender, EventArgs e)

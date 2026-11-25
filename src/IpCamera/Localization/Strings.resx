@@ -58,6 +58,30 @@
   <data name="Widgets.Camera.Config.FitContain" xml:space="preserve">
     <value>Fit</value>
   </data>
+  <data name="Widgets.Camera.Config.Overlay" xml:space="preserve">
+    <value>Status overlay</value>
+  </data>
+  <data name="Widgets.Camera.Config.OverlayDescription" xml:space="preserve">
+    <value>Show a live dot and the age of the last frame on the tile.</value>
+  </data>
+  <data name="Widgets.Camera.Overlay.Live" xml:space="preserve">
+    <value>LIVE</value>
+  </data>
+  <data name="Widgets.Camera.Overlay.LiveSeconds" xml:space="preserve">
+    <value>LIVE {seconds}s</value>
+  </data>
+  <data name="Widgets.Camera.Overlay.LiveMinutes" xml:space="preserve">
+    <value>LIVE {minutes}m</value>
+  </data>
+  <data name="Widgets.Camera.Overlay.LiveHours" xml:space="preserve">
+    <value>LIVE {hours}h</value>
+  </data>
+  <data name="Widgets.Camera.Overlay.Reconnecting" xml:space="preserve">
+    <value>RECONNECTING</value>
+  </data>
+  <data name="Widgets.Camera.Overlay.Connecting" xml:space="preserve">
+    <value>CONNECTING</value>
+  </data>
   <data name="Setup.Title" xml:space="preserve">
     <value>Add camera</value>
   </data>

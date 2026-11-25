@@ -14,6 +14,9 @@ internal interface IFrameStream : IAsyncDisposable
 	/// <summary>Whether the source failed since it last delivered a frame.</summary>
 	bool HasFailed { get; }
 
+	/// <summary>When the most recent frame arrived, or <c>null</c> before the first frame and after an idle stop.</summary>
+	DateTimeOffset? LastFrameAt { get; }
+
 	int? Width { get; }
 
 	int? Height { get; }

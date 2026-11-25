@@ -41,6 +41,10 @@ items.
   is its own video stream session, so one tile can show a small camera wall. Reuse the camera picker,
   the fit setting and the appearance handling; keep the single-camera layout as the default. Test the
   four-cell tree, an empty cell, and the modal on a pressed cell.
+  **Pressed-cell modal is blocked on the 3.0.5 SDK**: the short-press action knows the widget, not the
+  cell that was pressed, so a grid can only open the whole widget in the modal until the action context
+  carries the pressed node. The grid itself is still buildable; decide the modal behaviour before
+  starting.
 
 - [ ] **Camera health page**
   Add an integration page that lists every camera with its state, source type, resolution, last frame
@@ -48,10 +52,13 @@ items.
   the registry's cached state. This gives one place to see why a camera is not playing without opening
   its widget.
 
-- [ ] **Status overlay**
+- [x] **Status overlay**
   Draw a small live indicator and the last frame age on the camera tile, and a clear reconnecting state
-  instead of a frozen picture. Expose `LastFrameAt` on the stream registry, update a `UiState` once per
-  second while the session is open, and make the overlay optional in the widget settings.
+  instead of a frozen picture. Expose `LastFrameAt` on the stream, update the overlay once per second
+  while the session is open, and make it optional in the widget settings. Implemented with a
+  `LastFrameAt` timestamp on `IFrameStream`, an `overlay` widget key that is on for new widgets and off
+  for existing ones, and a one-second session tick that updates a small live or reconnecting pill. Tests
+  cover the tree, the states and the frame timestamp.
 
 - [ ] **Save snapshot action**
   Add an action that writes the current frame as a JPEG. The folder is configurable, with a default

@@ -155,6 +155,8 @@ public sealed class MjpegServerTests
 
 	public bool HasFailed => false;
 
+	public DateTimeOffset? LastFrameAt => null;
+
 	public int? Width => 640;
 
 		public int? Height => 360;

@@ -205,6 +205,8 @@ public sealed class CameraStreamProviderTests
 
 		public bool HasFailed { get; set; }
 
+		public DateTimeOffset? LastFrameAt => null;
+
 		public int? Width => null;
 
 		public int? Height => null;
