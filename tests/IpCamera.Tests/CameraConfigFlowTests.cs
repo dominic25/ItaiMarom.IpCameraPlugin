@@ -207,6 +207,36 @@ public sealed class CameraConfigFlowTests
 		{
 			return Task.FromResult(result);
 		}
+
+		public Task<bool> MoveAsync(
+			OnvifDevice device,
+			string? username,
+			string? password,
+			string direction,
+			double speed,
+			CancellationToken cancellationToken)
+		{
+			return Task.FromResult(false);
+		}
+
+		public Task<bool> StopAsync(
+			OnvifDevice device,
+			string? username,
+			string? password,
+			CancellationToken cancellationToken)
+		{
+			return Task.FromResult(false);
+		}
+
+		public Task<bool> SetIrAsync(
+			OnvifDevice device,
+			string? username,
+			string? password,
+			string mode,
+			CancellationToken cancellationToken)
+		{
+			return Task.FromResult(false);
+		}
 	}
 
 	private sealed class StubProbe(CameraProbeResult result) : ICameraProbe

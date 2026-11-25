@@ -325,6 +325,66 @@
   <data name="Actions.SaveSnapshot.SaveFailed" xml:space="preserve">
     <value>The snapshot could not be saved.</value>
   </data>
+  <data name="Actions.Control.MoveLeft.Name" xml:space="preserve">
+    <value>Move camera left</value>
+  </data>
+  <data name="Actions.Control.MoveLeft.Description" xml:space="preserve">
+    <value>Pans the pressed ONVIF camera left for a moment.</value>
+  </data>
+  <data name="Actions.Control.MoveRight.Name" xml:space="preserve">
+    <value>Move camera right</value>
+  </data>
+  <data name="Actions.Control.MoveRight.Description" xml:space="preserve">
+    <value>Pans the pressed ONVIF camera right for a moment.</value>
+  </data>
+  <data name="Actions.Control.MoveUp.Name" xml:space="preserve">
+    <value>Move camera up</value>
+  </data>
+  <data name="Actions.Control.MoveUp.Description" xml:space="preserve">
+    <value>Tilts the pressed ONVIF camera up for a moment.</value>
+  </data>
+  <data name="Actions.Control.MoveDown.Name" xml:space="preserve">
+    <value>Move camera down</value>
+  </data>
+  <data name="Actions.Control.MoveDown.Description" xml:space="preserve">
+    <value>Tilts the pressed ONVIF camera down for a moment.</value>
+  </data>
+  <data name="Actions.Control.Stop.Name" xml:space="preserve">
+    <value>Stop camera movement</value>
+  </data>
+  <data name="Actions.Control.Stop.Description" xml:space="preserve">
+    <value>Stops the pressed ONVIF camera.</value>
+  </data>
+  <data name="Actions.Control.IrAuto.Name" xml:space="preserve">
+    <value>Night vision: auto</value>
+  </data>
+  <data name="Actions.Control.IrAuto.Description" xml:space="preserve">
+    <value>Lets the pressed ONVIF camera switch its IR filter automatically.</value>
+  </data>
+  <data name="Actions.Control.IrOn.Name" xml:space="preserve">
+    <value>Night vision: on</value>
+  </data>
+  <data name="Actions.Control.IrOn.Description" xml:space="preserve">
+    <value>Turns on the IR filter of the pressed ONVIF camera.</value>
+  </data>
+  <data name="Actions.Control.IrOff.Name" xml:space="preserve">
+    <value>Night vision: off</value>
+  </data>
+  <data name="Actions.Control.IrOff.Description" xml:space="preserve">
+    <value>Turns off the IR filter of the pressed ONVIF camera.</value>
+  </data>
+  <data name="Actions.Control.NoWidget" xml:space="preserve">
+    <value>This action has to run from a camera widget.</value>
+  </data>
+  <data name="Actions.Control.NotConfigured" xml:space="preserve">
+    <value>The camera widget has no camera selected.</value>
+  </data>
+  <data name="Actions.Control.ReadFailed" xml:space="preserve">
+    <value>The camera widget's settings could not be read.</value>
+  </data>
+  <data name="Actions.Control.Failed" xml:space="preserve">
+    <value>The camera did not accept the control.</value>
+  </data>
   <data name="FolderViews.CameraWall.Name" xml:space="preserve">
     <value>Camera wall</value>
   </data>

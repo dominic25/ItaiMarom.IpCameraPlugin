@@ -18,6 +18,9 @@ internal sealed class OnvifClient(IHttpClientFactory httpClients, ILogger logger
 	private const string EnvelopeStart = """
 		<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
 		            xmlns:trt="http://www.onvif.org/ver10/media/wsdl"
+		            xmlns:tds="http://www.onvif.org/ver10/device/wsdl"
+		            xmlns:tptz="http://www.onvif.org/ver20/ptz/wsdl"
+		            xmlns:timg="http://www.onvif.org/ver20/imaging/wsdl"
 		            xmlns:tt="http://www.onvif.org/ver10/schema">
 		""";
 
@@ -86,8 +89,219 @@ internal sealed class OnvifClient(IHttpClientFactory httpClients, ILogger logger
 		return new OnvifStream(token, StripUserInfo(streamUri), StripUserInfo(snapshotUri));
 	}
 
+	public async Task<bool> MoveAsync(
+		OnvifDevice device,
+		string? username,
+		string? password,
+		string direction,
+		double speed,
+		CancellationToken cancellationToken)
+	{
+		var capabilities = await CapabilitiesAsync(device, username, password, cancellationToken)
+			.ConfigureAwait(false);
+		var media = Service(capabilities, "Media") ?? DefaultService(device, "media_service");
+		var ptz = Service(capabilities, "PTZ") ?? DefaultService(device, "ptz_service");
+		var token = await ProfileTokenAsync(media, device, username, password, cancellationToken)
+			.ConfigureAwait(false);
+
+		if (token is null)
+		{
+			return false;
+		}
+
+		var speedValue = Math.Clamp(speed, 0.1, 1.0);
+		var x = direction switch
+		{
+			"left" => -speedValue,
+			"right" => speedValue,
+			_ => 0
+		};
+		var y = direction switch
+		{
+			"up" => speedValue,
+			"down" => -speedValue,
+			_ => 0
+		};
+
+		var body = $"""
+			<tptz:ContinuousMove>
+			  <tptz:ProfileToken>{SecurityElement.Escape(token)}</tptz:ProfileToken>
+			  <tptz:Velocity>
+			    <tt:PanTilt x="{x.ToString("0.###", CultureInfo.InvariantCulture)}" y="{y.ToString("0.###", CultureInfo.InvariantCulture)}"/>
+			    <tt:Zoom x="0"/>
+			  </tptz:Velocity>
+			</tptz:ContinuousMove>
+			""";
+
+		return await PostToAsync(ptz, body, username, password, cancellationToken).ConfigureAwait(false) is not null;
+	}
+
+	public async Task<bool> StopAsync(
+		OnvifDevice device,
+		string? username,
+		string? password,
+		CancellationToken cancellationToken)
+	{
+		var capabilities = await CapabilitiesAsync(device, username, password, cancellationToken)
+			.ConfigureAwait(false);
+		var media = Service(capabilities, "Media") ?? DefaultService(device, "media_service");
+		var ptz = Service(capabilities, "PTZ") ?? DefaultService(device, "ptz_service");
+		var token = await ProfileTokenAsync(media, device, username, password, cancellationToken)
+			.ConfigureAwait(false);
+
+		if (token is null)
+		{
+			return false;
+		}
+
+		var body = $"""
+			<tptz:Stop>
+			  <tptz:ProfileToken>{SecurityElement.Escape(token)}</tptz:ProfileToken>
+			  <tptz:PanTilt>true</tptz:PanTilt>
+			  <tptz:Zoom>true</tptz:Zoom>
+			</tptz:Stop>
+			""";
+
+		return await PostToAsync(ptz, body, username, password, cancellationToken).ConfigureAwait(false) is not null;
+	}
+
+	public async Task<bool> SetIrAsync(
+		OnvifDevice device,
+		string? username,
+		string? password,
+		string mode,
+		CancellationToken cancellationToken)
+	{
+		var capabilities = await CapabilitiesAsync(device, username, password, cancellationToken)
+			.ConfigureAwait(false);
+		var media = Service(capabilities, "Media") ?? DefaultService(device, "media_service");
+		var imaging = Service(capabilities, "Imaging") ?? DefaultService(device, "imaging_service");
+		var source = await VideoSourceTokenAsync(media, device, username, password, cancellationToken)
+			.ConfigureAwait(false);
+
+		if (source is null)
+		{
+			return false;
+		}
+
+		var body = $"""
+			<timg:SetImagingSettings>
+			  <timg:VideoSourceToken>{SecurityElement.Escape(source)}</timg:VideoSourceToken>
+			  <timg:ImagingSettings>
+			    <tt:IrCutFilter>{SecurityElement.Escape(mode)}</tt:IrCutFilter>
+			  </timg:ImagingSettings>
+			</timg:SetImagingSettings>
+			""";
+
+		return await PostToAsync(imaging, body, username, password, cancellationToken).ConfigureAwait(false) is not null;
+	}
+
+	private async Task<XDocument?> CapabilitiesAsync(
+		OnvifDevice device,
+		string? username,
+		string? password,
+		CancellationToken cancellationToken)
+	{
+		return await PostAsync(
+			device,
+			"<tds:GetCapabilities><tds:Category>All</tds:Category></tds:GetCapabilities>",
+			username,
+			password,
+			cancellationToken).ConfigureAwait(false);
+	}
+
+	private async Task<string?> ProfileTokenAsync(
+		Uri media,
+		OnvifDevice device,
+		string? username,
+		string? password,
+		CancellationToken cancellationToken)
+	{
+		var profiles = await PostToAsync(
+			media,
+			"<trt:GetProfiles/>",
+			username,
+			password,
+			cancellationToken).ConfigureAwait(false);
+
+		var token = profiles?
+			.Descendants()
+			.FirstOrDefault(element => element.Name.LocalName == "Profiles")?
+			.Attribute("token")?
+			.Value;
+
+		if (string.IsNullOrEmpty(token))
+		{
+			logger.Information("ONVIF device {Host} returned no profile for a control.", device.Host);
+			return null;
+		}
+
+		return token;
+	}
+
+	private async Task<string?> VideoSourceTokenAsync(
+		Uri media,
+		OnvifDevice device,
+		string? username,
+		string? password,
+		CancellationToken cancellationToken)
+	{
+		var sources = await PostToAsync(
+			media,
+			"<trt:GetVideoSources/>",
+			username,
+			password,
+			cancellationToken).ConfigureAwait(false);
+
+		var token = sources?
+			.Descendants()
+			.FirstOrDefault(element => element.Name.LocalName == "VideoSources")?
+			.Attribute("token")?
+			.Value;
+
+		if (string.IsNullOrEmpty(token))
+		{
+			logger.Information("ONVIF device {Host} returned no video source for imaging.", device.Host);
+			return null;
+		}
+
+		return token;
+	}
+
+	private static Uri? Service(XDocument? capabilities, string name)
+	{
+		var address = capabilities?
+			.Descendants()
+			.FirstOrDefault(element => element.Name.LocalName == name)?
+			.Descendants()
+			.FirstOrDefault(element => element.Name.LocalName == "XAddr")?
+			.Value;
+
+		return Uri.TryCreate(address, UriKind.Absolute, out var uri) ? uri : null;
+	}
+
+	private static Uri DefaultService(OnvifDevice device, string path)
+	{
+		return new Uri($"http://{device.Host}/onvif/{path}");
+	}
+
 	private async Task<XDocument?> PostAsync(
 		OnvifDevice device,
+		string body,
+		string? username,
+		string? password,
+		CancellationToken cancellationToken)
+	{
+		return await PostToAsync(
+			new Uri(device.XAddr),
+			body,
+			username,
+			password,
+			cancellationToken).ConfigureAwait(false);
+	}
+
+	private async Task<XDocument?> PostToAsync(
+		Uri address,
 		string body,
 		string? username,
 		string? password,
@@ -104,7 +318,7 @@ internal sealed class OnvifClient(IHttpClientFactory httpClients, ILogger logger
 
 			var envelope = $"{EnvelopeStart}<s:Header>{security}</s:Header><s:Body>{body}</s:Body></s:Envelope>";
 
-			using var request = new HttpRequestMessage(HttpMethod.Post, device.XAddr)
+			using var request = new HttpRequestMessage(HttpMethod.Post, address)
 			{
 				Content = new StringContent(envelope, Encoding.UTF8, "application/soap+xml")
 			};
@@ -118,7 +332,7 @@ internal sealed class OnvifClient(IHttpClientFactory httpClients, ILogger logger
 			{
 				logger.Information(
 					"ONVIF device {Host} answered {Status}.",
-					device.Host,
+					address.Host,
 					(int)response.StatusCode);
 				return null;
 			}
@@ -128,12 +342,12 @@ internal sealed class OnvifClient(IHttpClientFactory httpClients, ILogger logger
 		}
 		catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
 		{
-			logger.Information("ONVIF device {Host} did not answer in time.", device.Host);
+			logger.Information("ONVIF device {Host} did not answer in time.", address.Host);
 			return null;
 		}
 		catch (Exception exception) when (exception is not OutOfMemoryException)
 		{
-			logger.Information("ONVIF device {Host} failed: {Reason}", device.Host, exception.Message);
+			logger.Information("ONVIF device {Host} failed: {Reason}", address.Host, exception.Message);
 			return null;
 		}
 	}

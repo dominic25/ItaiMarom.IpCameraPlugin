@@ -48,6 +48,10 @@ camera picture is a local test stream.
   per action; empty means `Pictures\IP Camera`.
 - **A camera wall folder view**: replace a folder's widget grid with one camera or up to four in a
   configurable wall. Pick it in the folder's settings; Macro Deck keeps its own back button.
+- **ONVIF controls**: Move left, Move right, Move up, Move down and Stop actions for pan and tilt, plus
+  Night vision auto/on/off. They act on the pressed camera and use its ONVIF device service at
+  `http://<host>/onvif/device_service`; a camera with a different ONVIF path or one that only speaks a
+  vendor API is not covered yet. Xiaomi PTZ is not implemented.
 - **A status overlay** (optional, off for existing widgets): a small live dot and the age of the last
   frame on the tile, or "RECONNECTING" when the source drops. New widgets enable it by default. It can
   be turned off in the widget settings, and a background opacity slider controls the dark strip behind

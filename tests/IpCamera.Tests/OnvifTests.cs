@@ -85,6 +85,26 @@ public sealed class OnvifTests
 	}
 
 	[Test]
+	public async Task A_ptz_move_stop_and_ir_update_are_sent()
+	{
+		using var handler = new ControlHandler();
+		var client = new OnvifClient(new StubFactory(handler), _logger);
+		var device = new OnvifDevice("http://192.168.1.50/onvif/device_service", "Front", null);
+
+		Assert.That(await client.MoveAsync(device, "admin", "secret", "left", 0.5, CancellationToken.None), Is.True);
+		Assert.That(await client.StopAsync(device, "admin", "secret", CancellationToken.None), Is.True);
+		Assert.That(await client.SetIrAsync(device, "admin", "secret", "ON", CancellationToken.None), Is.True);
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(handler.Bodies.Any(body => body.Contains("ContinuousMove", StringComparison.Ordinal)), Is.True);
+			Assert.That(handler.Bodies.Any(body => body.Contains("PanTilt x=\"-0.5\"", StringComparison.Ordinal)), Is.True);
+			Assert.That(handler.Bodies.Any(body => body.Contains("<tptz:Stop>", StringComparison.Ordinal)), Is.True);
+			Assert.That(handler.Bodies.Any(body => body.Contains("<tt:IrCutFilter>ON</tt:IrCutFilter>", StringComparison.Ordinal)), Is.True);
+		});
+	}
+
+	[Test]
 	public void User_info_is_removed_from_an_onvif_url()
 	{
 		Assert.That(
@@ -174,6 +194,65 @@ public sealed class OnvifTests
 		      </trt:MediaUri>
 		    </trt:GetSnapshotUriResponse>
 		  </s:Body>
+		</s:Envelope>
+		""";
+
+	private sealed class ControlHandler : HttpMessageHandler
+	{
+		public List<string> Bodies { get; } = [];
+
+		protected override async Task<HttpResponseMessage> SendAsync(
+			HttpRequestMessage request,
+			CancellationToken cancellationToken)
+		{
+			var body = await request.Content!.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+			Bodies.Add(body);
+
+			var xml = body switch
+			{
+				var text when text.Contains("GetCapabilities", StringComparison.Ordinal) => CapabilitiesResponse,
+				var text when text.Contains("GetProfiles", StringComparison.Ordinal) => ProfileResponse,
+				var text when text.Contains("GetVideoSources", StringComparison.Ordinal) => VideoSourcesResponse,
+				_ => EmptyResponse
+			};
+
+			return new HttpResponseMessage(HttpStatusCode.OK)
+			{
+				Content = new StringContent(xml, Encoding.UTF8, "application/soap+xml")
+			};
+		}
+	}
+
+	private const string CapabilitiesResponse = """
+		<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
+		            xmlns:tds="http://www.onvif.org/ver10/device/wsdl"
+		            xmlns:tt="http://www.onvif.org/ver10/schema">
+		  <s:Body>
+		    <tds:GetCapabilitiesResponse>
+		      <tds:Capabilities>
+		        <tt:Media><tt:XAddr>http://192.168.1.50/onvif/media_service</tt:XAddr></tt:Media>
+		        <tt:PTZ><tt:XAddr>http://192.168.1.50/onvif/ptz_service</tt:XAddr></tt:PTZ>
+		        <tt:Imaging><tt:XAddr>http://192.168.1.50/onvif/imaging_service</tt:XAddr></tt:Imaging>
+		      </tds:Capabilities>
+		    </tds:GetCapabilitiesResponse>
+		  </s:Body>
+		</s:Envelope>
+		""";
+
+	private const string VideoSourcesResponse = """
+		<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
+		            xmlns:trt="http://www.onvif.org/ver10/media/wsdl">
+		  <s:Body>
+		    <trt:GetVideoSourcesResponse>
+		      <trt:VideoSources token="source1"/>
+		    </trt:GetVideoSourcesResponse>
+		  </s:Body>
+		</s:Envelope>
+		""";
+
+	private const string EmptyResponse = """
+		<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope">
+		  <s:Body/>
 		</s:Envelope>
 		""";
 }

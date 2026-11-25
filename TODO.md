@@ -135,22 +135,26 @@ items.
   packager, a loopback segment server, cleanup, and the same session lifecycle as the MJPEG relay.
   Only worth it for smoother playback on iPhones; MJPEG works everywhere.
 
-- [ ] **Camera controls**
-  Add optional per-camera control, starting with pan and tilt:
+- [x] **ONVIF camera controls**
+  Move left, Move right, Move up, Move down, Stop and Night vision auto/on/off actions for the pressed
+  camera. The client reads the device capabilities, the media profile token and the video source token,
+  then sends `ContinuousMove`, `Stop` and `SetImagingSettings` with the existing WS-Security header. The
+  device service is derived from the camera host as `http://<host>/onvif/device_service`; cameras with a
+  different ONVIF path are not covered yet. Tested with a fake SOAP handler, not on hardware.
+
+- [ ] **Camera controls for Xiaomi and vendor APIs**
+  Add optional per-camera control beyond ONVIF:
 
   - **Xiaomi PTZ.** The Mi 360 moves with the encrypted motor command (`cmdMotorReq` 0x112, operations
-    1 left, 2 right, 3 up, 4 down) over the P2P session go2rtc already holds. go2rtc has an open pull
-    request (#2531) exposing `POST /api/xiaomi/motor?src=<stream>&operation=<1-4>`; it is not merged.
-    Build that branch for the server or wait for it, store the go2rtc control stream on the camera
-    entry (it is `mi360`, not the transcoded `mi360_mjpeg`), and test physical movement on
-    `chuangmi.camera.ipc019`, which is not in the verified model list of the related project.
-  - **ONVIF PTZ.** Use ContinuousMove and Stop for cameras that expose ONVIF, sharing the connection
-    code with ONVIF discovery.
-  - **Other Xiaomi controls.** The camera's MIoT spec exposes night vision, wide dynamic range,
-    glimmer full colour, recording mode and a read-only motion tracking flag. Those need a Xiaomi
-    cloud or local miIO path with a stored device token, separate from the video session.
+    1 left, 2 right, 3 up, 4 down) over the P2P session go2rtc already holds. go2rtc PR #2531 exposing
+    `POST /api/xiaomi/motor?src=<stream>&operation=<1-4>` is still open and has a stream-killing buffer
+    bug; do not ship against it. Prefer local miIO `set_motor`, which needs the device token, or wait for
+    a fixed go2rtc release.
+  - **Other Xiaomi controls.** MIoT has no motor and no speaker. It exposes night shot, wide dynamic
+    range, glimmer full colour and recording mode (write), plus motion tracking (read). Use local
+    miIO/MIoT with the token stored as a secret.
+  - **Vendor APIs.** Hikvision ISAPI, Axis VAPIX, Dahua CGI and Reolink have PTZ and IR endpoints; add
+    one family at a time only where users ask.
 
-  Shape it as actions (Move left, right, up, down, Night vision on/off, Recording mode) and optionally
-  a d-pad widget. Keep every control opt-in, store credentials as secrets, and make the plugin work
-  unchanged for cameras that only stream. Decide whether to rely on go2rtc and Home Assistant or to
-  implement the protocol inside the plugin before writing any of it.
+  Shape the remaining controls as actions and optionally a d-pad widget. Keep every control opt-in,
+  store credentials as secrets, and make the plugin work unchanged for cameras that only stream.

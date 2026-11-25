@@ -73,7 +73,8 @@ internal sealed class PluginIntegration : IPluginIntegration,
 		Actions =
 		[
 			new ShowCameraAction(() => _context?.Widgets, _logger),
-			new SaveSnapshotAction(() => _context?.Widgets, _registry, _logger)
+			new SaveSnapshotAction(() => _context?.Widgets, _registry, _logger),
+			.. CameraControlAction.Create(() => _context?.Widgets, _registry, _onvifClient, _logger)
 		];
 	}
 

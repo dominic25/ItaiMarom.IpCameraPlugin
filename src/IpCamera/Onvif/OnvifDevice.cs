@@ -32,4 +32,25 @@ internal interface IOnvifClient
 		string? username,
 		string? password,
 		CancellationToken cancellationToken);
+
+	Task<bool> MoveAsync(
+		OnvifDevice device,
+		string? username,
+		string? password,
+		string direction,
+		double speed,
+		CancellationToken cancellationToken);
+
+	Task<bool> StopAsync(
+		OnvifDevice device,
+		string? username,
+		string? password,
+		CancellationToken cancellationToken);
+
+	Task<bool> SetIrAsync(
+		OnvifDevice device,
+		string? username,
+		string? password,
+		string mode,
+		CancellationToken cancellationToken);
 }
