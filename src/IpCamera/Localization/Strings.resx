@@ -148,6 +148,9 @@
   <data name="Health.Connecting" xml:space="preserve">
     <value>Connecting</value>
   </data>
+  <data name="Health.Idle" xml:space="preserve">
+    <value>Idle</value>
+  </data>
   <data name="Health.NoFrame" xml:space="preserve">
     <value>No frame yet</value>
   </data>

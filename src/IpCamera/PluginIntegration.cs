@@ -194,6 +194,13 @@ internal sealed class PluginIntegration : IPluginIntegration,
 			surface.Attributes.TryGetValue(UiPageSurfaceAttributes.PageId, out var pageId) &&
 			pageId.GetString() == "cameras")
 		{
+			// A page can be opened while the integration is still reading its entries after a reconnect or
+			// an install, which would otherwise render an empty camera list that never catches up.
+			for (var attempt = 0; attempt < 20 && _registry.Cameras.Count == 0; attempt++)
+			{
+				await Task.Delay(100, cancellationToken).ConfigureAwait(false);
+			}
+
 			var health = new CameraHealthView(_registry);
 			health.Update();
 

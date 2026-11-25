@@ -14,6 +14,7 @@ internal sealed class CameraHealthView
 {
 	private const string LiveColor = "#22c55e";
 	private const string PendingColor = "#f59e0b";
+	private const string IdleColor = "#94a3b8";
 	private const string OfflineColor = "#ef4444";
 
 	private readonly List<Row> _rows;
@@ -169,6 +170,11 @@ internal sealed class CameraHealthView
 				_state.Set(Strings.Health.Live());
 				_stateColor.Set(LiveColor);
 			}
+			else if (_stream.State == VideoStreamState.Disconnected)
+			{
+				_state.Set(Strings.Health.Idle());
+				_stateColor.Set(IdleColor);
+			}
 			else
 			{
 				_state.Set(Strings.Health.Connecting());
@@ -214,7 +220,7 @@ internal sealed class CameraHealthView
 
 			if (stream?.LastFrameAt is not { } lastFrameAt)
 			{
-				return $"{kind} · {size} · no frame";
+				return $"{kind} · {size}";
 			}
 
 			var age = DateTimeOffset.UtcNow - lastFrameAt;
