@@ -2,6 +2,7 @@ using IpCamera.Cameras;
 using IpCamera.ConfigFlow;
 using IpCamera.Onvif;
 using IpCamera.Streaming;
+using IpCamera.Xiaomi;
 using MacroDeck.Sdk.ConfigFlow;
 using MacroDeck.Sdk.Http;
 using NUnit.Framework;
@@ -173,17 +174,36 @@ public sealed class CameraConfigFlowTests
 		Assert.That(result.FieldErrors, Does.ContainKey(CameraSettings.ControlTokenKey));
 	}
 
+	[Test]
+	public async Task A_xiaomi_token_that_the_camera_rejects_is_reported()
+	{
+		var flow = CreateFlow(miio: new StubMiioClient(success: false));
+
+		var result = await flow.SubmitAsync("camera", Input(
+			("name", "mi360"),
+			("kind", "mjpeg"),
+			("url", "http://192.168.1.60:1984/api/stream.mjpeg?src=mi360_mjpeg"),
+			("control", "xiaomi"),
+			("controlHost", "192.168.1.30"),
+			("controlToken", "00112233445566778899aabbccddeeff")), new StubFlowContext(), CancellationToken.None);
+
+		Assert.That(result.Kind, Is.EqualTo(ConfigFlowResultKind.Error));
+		Assert.That(result.FieldErrors, Does.ContainKey(CameraSettings.ControlTokenKey));
+	}
+
 	private static CameraConfigFlow CreateFlow(
 		FfmpegLocator? ffmpeg = null,
 		CameraProbeResult? probeResult = null,
 		IOnvifDiscovery? discovery = null,
-		IOnvifClient? onvifClient = null)
+		IOnvifClient? onvifClient = null,
+		IMiioClient? miio = null)
 	{
 		return new CameraConfigFlow(
 			ffmpeg ?? new FfmpegLocator(null),
 			new StubProbe(probeResult ?? CameraProbeResult.Success),
 			discovery ?? new StubDiscovery(),
 			onvifClient ?? new StubOnvifClient(null),
+			miio ?? new StubMiioClient(),
 			_logger);
 	}
 
@@ -293,6 +313,35 @@ public sealed class CameraConfigFlowTests
 			CancellationToken cancellationToken)
 		{
 			return Task.FromResult(false);
+		}
+	}
+
+	private sealed class StubMiioClient(bool success = true) : IMiioClient
+	{
+		public Task<MiioResult> SetMotorAsync(
+			MiioEndpoint endpoint,
+			int operation,
+			CancellationToken cancellationToken)
+		{
+			return Result();
+		}
+
+		public Task<MiioResult> SetNightModeAsync(
+			MiioEndpoint endpoint,
+			int mode,
+			CancellationToken cancellationToken)
+		{
+			return Result();
+		}
+
+		public Task<MiioResult> ProbeAsync(MiioEndpoint endpoint, CancellationToken cancellationToken)
+		{
+			return Result();
+		}
+
+		private Task<MiioResult> Result()
+		{
+			return Task.FromResult(success ? MiioResult.Success : MiioResult.Failure("test"));
 		}
 	}
 

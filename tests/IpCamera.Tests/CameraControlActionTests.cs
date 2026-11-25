@@ -229,6 +229,11 @@ public sealed class CameraControlActionTests
 			NightModes.Add(mode);
 			return Task.FromResult(MiioResult.Success);
 		}
+
+		public Task<MiioResult> ProbeAsync(MiioEndpoint endpoint, CancellationToken cancellationToken)
+		{
+			return Task.FromResult(MiioResult.Success);
+		}
 	}
 
 	private sealed class FakeOnvif : IOnvifClient

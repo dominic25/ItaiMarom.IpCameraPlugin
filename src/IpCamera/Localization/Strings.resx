@@ -242,13 +242,16 @@
     <value>Xiaomi token</value>
   </data>
   <data name="Setup.ControlTokenDescription" xml:space="preserve">
-    <value>The 32 character device token from Mi Home or your Xiaomi integration. It is stored as a secret.</value>
+    <value>The 32 character device token from Mi Home, a Xiaomi integration, or a tool such as python-miio. It is stored as a secret and checked against the camera when you save.</value>
   </data>
   <data name="Setup.ControlHostRequired" xml:space="preserve">
     <value>Enter the camera's IP address.</value>
   </data>
   <data name="Setup.ControlTokenInvalid" xml:space="preserve">
     <value>The Xiaomi token must be 32 hexadecimal characters.</value>
+  </data>
+  <data name="Setup.ControlTokenCheckFailed" xml:space="preserve">
+    <value>The camera did not answer with this token. Check the camera address and the Xiaomi token.</value>
   </data>
   <data name="Setup.NameRequired" xml:space="preserve">
     <value>Enter a name for the camera.</value>

@@ -125,7 +125,7 @@ internal sealed class PluginIntegration : IPluginIntegration,
 
 	IConfigFlow IConfigFlowProvider.CreateConfigFlow()
 	{
-		return new CameraConfigFlow(_ffmpeg, _probe, _onvifDiscovery, _onvifClient, _logger);
+		return new CameraConfigFlow(_ffmpeg, _probe, _onvifDiscovery, _onvifClient, _miioClient, _logger);
 	}
 
 	public async Task InitializeAsync(IIntegrationContext context)

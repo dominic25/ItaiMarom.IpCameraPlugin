@@ -2,6 +2,7 @@ using System.Globalization;
 using IpCamera.Cameras;
 using IpCamera.Onvif;
 using IpCamera.Streaming;
+using IpCamera.Xiaomi;
 using MacroDeck.Localization;
 using MacroDeck.Sdk.Actions;
 using MacroDeck.Sdk.ConfigFlow;
@@ -18,6 +19,7 @@ internal sealed class CameraConfigFlow(
 	ICameraProbe probe,
 	IOnvifDiscovery onvifDiscovery,
 	IOnvifClient onvifClient,
+	IMiioClient miio,
 	ILogger logger) : IConfigFlow
 {
 	private const string StepId = "camera";
@@ -220,6 +222,22 @@ internal sealed class CameraConfigFlow(
 			}
 		}
 
+		if (control == "xiaomi" && !string.IsNullOrEmpty(controlToken))
+		{
+			// The motes answer a read-only get_prop only when the token is right, so a bad token is
+			// caught here instead of on the deck.
+			var miioResult = await miio
+				.ProbeAsync(
+					new MiioEndpoint(controlHost!, MiioEndpoint.DefaultPort, controlToken),
+					cancellationToken)
+				.ConfigureAwait(false);
+
+			if (!miioResult.Succeeded)
+			{
+				return FieldError(CameraSettings.ControlTokenKey, Strings.Setup.ControlTokenCheckFailed());
+			}
+		}
+
 		var values = new Dictionary<string, ConfigFlowValue>
 		{
 			[CameraSettings.KindKey] = ConfigFlowValue.Plain(CameraDefinition.ToWireValue(kind)),
@@ -322,6 +340,29 @@ internal sealed class CameraConfigFlow(
 			description: Strings.Setup.QualityDescription(),
 			defaultValue: "custom"));
 
+		fields.Add(ActionParameter.Choice(
+			CameraSettings.ControlKey,
+			[
+				new ActionParameterOption { Value = "onvif", Label = Strings.Setup.ControlOnvif() },
+				new ActionParameterOption { Value = "xiaomi", Label = Strings.Setup.ControlXiaomi() },
+				new ActionParameterOption { Value = "none", Label = Strings.Setup.ControlNone() }
+			],
+			label: Strings.Setup.Control(),
+			description: Strings.Setup.ControlDescription(),
+			defaultValue: "onvif"));
+
+		fields.Add(ActionParameter.Text(
+			CameraSettings.ControlHostKey,
+			label: Strings.Setup.ControlHost(),
+			description: Strings.Setup.ControlHostDescription(),
+			placeholder: "192.168.1.30"));
+
+		fields.Add(ActionParameter.Secret(
+			CameraSettings.ControlTokenKey,
+			label: Strings.Setup.ControlToken(),
+			description: Strings.Setup.ControlTokenDescription())
+			.OnlyWhen(CameraSettings.ControlKey, "xiaomi"));
+
 		return new ConfigFlowStep
 		{
 			StepId = StepId,
@@ -362,27 +403,7 @@ internal sealed class CameraConfigFlow(
 					],
 					label: Strings.Setup.RtspTransport(),
 					defaultValue: "tcp")
-					.OnlyWhen(CameraSettings.KindKey, "rtsp"),
-				ActionParameter.Choice(
-					CameraSettings.ControlKey,
-					[
-						new ActionParameterOption { Value = "onvif", Label = Strings.Setup.ControlOnvif() },
-						new ActionParameterOption { Value = "xiaomi", Label = Strings.Setup.ControlXiaomi() },
-						new ActionParameterOption { Value = "none", Label = Strings.Setup.ControlNone() }
-					],
-					label: Strings.Setup.Control(),
-					description: Strings.Setup.ControlDescription(),
-					defaultValue: "onvif"),
-				ActionParameter.Text(
-					CameraSettings.ControlHostKey,
-					label: Strings.Setup.ControlHost(),
-					description: Strings.Setup.ControlHostDescription(),
-					placeholder: "192.168.1.30"),
-				ActionParameter.Secret(
-					CameraSettings.ControlTokenKey,
-					label: Strings.Setup.ControlToken(),
-					description: Strings.Setup.ControlTokenDescription())
-					.OnlyWhen(CameraSettings.ControlKey, "xiaomi")
+					.OnlyWhen(CameraSettings.KindKey, "rtsp")
 			]
 		};
 	}

@@ -25,6 +25,8 @@ internal interface IMiioClient
 	Task<MiioResult> SetMotorAsync(MiioEndpoint endpoint, int operation, CancellationToken cancellationToken);
 
 	Task<MiioResult> SetNightModeAsync(MiioEndpoint endpoint, int mode, CancellationToken cancellationToken);
+
+	Task<MiioResult> ProbeAsync(MiioEndpoint endpoint, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -41,6 +43,8 @@ internal sealed class MiioClient : IMiioClient
 
 	private static readonly byte[] _hello = Convert.FromHexString(
 		"21310020ffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+
+	private static readonly string[] _probeProperties = ["power"];
 
 	private static readonly TimeSpan _defaultTimeout = TimeSpan.FromSeconds(3);
 
@@ -85,6 +89,15 @@ internal sealed class MiioClient : IMiioClient
 			endpoint,
 			"set_night_mode",
 			JsonSerializer.SerializeToNode(new[] { mode })!,
+			cancellationToken);
+	}
+
+	public Task<MiioResult> ProbeAsync(MiioEndpoint endpoint, CancellationToken cancellationToken)
+	{
+		return SendAsync(
+			endpoint,
+			"get_prop",
+			JsonSerializer.SerializeToNode(_probeProperties)!,
 			cancellationToken);
 	}
 
