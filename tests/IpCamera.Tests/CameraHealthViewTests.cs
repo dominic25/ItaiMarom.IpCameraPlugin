@@ -40,10 +40,10 @@ public sealed class CameraHealthViewTests
 
 		Assert.Multiple(() =>
 		{
-			Assert.That(ContainsId(view.Tree.Root, "health-retry-0"), Is.True);
-			Assert.That(ContainsId(view.Tree.Root, "health-state-0"), Is.True);
-			Assert.That(ContainsId(view.Tree.Root, "health-details-0"), Is.True);
-			Assert.That(view.Tree.Root.Id, Does.Contain("health"));
+			Assert.That(ContainsId(view.Tree.Root, "health-item-0"), Is.True);
+			Assert.That(ContainsId(view.Tree.Root, "health-retry"), Is.True);
+			Assert.That(ContainsId(view.Tree.Root, "health-detail-state"), Is.True);
+			Assert.That(ContainsId(view.Tree.Root, "health-list"), Is.True);
 		});
 	}
 

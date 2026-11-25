@@ -3,6 +3,7 @@ using IpCamera.Streaming;
 using MacroDeck.Localization;
 using MacroDeck.Sdk.VideoStreams;
 using MacroDeck.Ui.Components;
+using MacroDeck.Ui.Config;
 using MacroDeck.Ui.Dsl;
 using MacroDeck.Ui.Runtime;
 
@@ -15,68 +16,108 @@ internal sealed class CameraHealthView
 	private const string PendingColor = "#f59e0b";
 	private const string OfflineColor = "#ef4444";
 
-	private readonly CameraRegistry _registry;
 	private readonly List<Row> _rows;
+	private readonly UiState<string?> _selected = new(null);
 
 	public CameraHealthView(CameraRegistry registry)
 	{
-		_registry = registry;
 		_rows = registry.Cameras
 			.Select((camera, index) => new Row(camera, registry, index))
 			.ToList();
+
+		if (_rows.Count > 0)
+		{
+			_selected.Set(_rows[0].Camera.Id);
+		}
 	}
 
-	public UiStack Build()
-	{
-		var children = new List<UiElement>
-		{
-			new UiTextRun
-			{
-				Key = "health-title",
-				Text = Strings.Health.Title(),
-				Size = 0.06,
-				MinSize = 0.04,
-				MaxLines = 1
-			},
-			new UiTextRun
-			{
-				Key = "health-description",
-				Text = Strings.Health.Description(),
-				Size = 0.03,
-				MinSize = 0.022,
-				Role = UiValue.Of(UiComponentTextRoles.Secondary),
-				MaxLines = 2,
-				Wrap = UiValue.Of(true)
-			}
-		};
+	private Row? Selected =>
+		_rows.FirstOrDefault(row => row.Camera.Id == _selected.Value) ?? _rows.FirstOrDefault();
 
+	public UiSplit Build()
+	{
+		var rail = _rows.Select(row => row.BuildListItem(_selected)).ToList();
+
+		UiElement detail;
 		if (_rows.Count == 0)
 		{
-			children.Add(new UiTextRun
+			detail = new UiEmptyState
 			{
 				Key = "health-empty",
-				Text = Strings.Health.Empty(),
-				Size = 0.035,
-				MinSize = 0.025,
-				Role = UiValue.Of(UiComponentTextRoles.Secondary),
-				MaxLines = 2,
-				Wrap = UiValue.Of(true)
-			});
+				Icon = UiValue.Of("camera"),
+				Title = Strings.Health.Title(),
+				Text = Strings.Health.Empty()
+			};
 		}
 		else
 		{
-			children.AddRange(_rows.Select(row => row.Build()));
+			detail = new UiConfigStack
+			{
+				Key = "health-detail",
+				Gap = UiValue.Of(UiStackGaps.Medium),
+				Children =
+				[
+					new UiHeading
+					{
+						Key = "health-detail-title",
+						Text = UiText.From(() => Selected?.Camera.Name ?? string.Empty)
+					},
+					new UiTextRun
+					{
+						Key = "health-detail-details",
+						Text = UiText.From(() => Selected?.Summary ?? string.Empty),
+						Size = 0.032,
+						MinSize = 0.022,
+						Role = UiValue.Of(UiComponentTextRoles.Secondary),
+						MaxLines = 2,
+						Wrap = UiValue.Of(true)
+					},
+					new UiTextRun
+					{
+						Key = "health-detail-state",
+						Text = UiText.FromLocalized(() => Selected?.State ?? Strings.Health.Connecting()),
+						Size = 0.04,
+						MinSize = 0.028,
+						Color = UiValue.From(() => Selected?.Color ?? PendingColor),
+						MaxLines = 1
+					},
+					new UiConfigButton
+					{
+						Key = "health-retry",
+						Label = Strings.Health.Retry(),
+						Variant = UiValue.Of(UiButtonVariants.Primary),
+						Events =
+						[
+							UiEventHandler.OnAsync(
+								UiConfigEvents.Activate,
+								async cancellationToken =>
+								{
+									if (Selected?.Stream is { } stream)
+									{
+										cancellationToken.ThrowIfCancellationRequested();
+										await stream.RestartAsync().ConfigureAwait(false);
+									}
+								})
+						]
+					}
+				]
+			};
 		}
 
-		return new UiStack
+		return new UiSplit
 		{
 			Key = "health-page",
-			Fill = true,
-			Direction = UiValue.Of(UiComponentDirections.Vertical),
-			Padding = 0.04,
-			Gap = 0.02,
-			Background = UiValue.Of("#0b0f14"),
-			Children = children
+			RailTitle = Strings.Health.Title(),
+			Rail =
+			[
+				new UiConfigList
+				{
+					Key = "health-list",
+					Label = Strings.Health.Title(),
+					Children = rail
+				}
+			],
+			Detail = [detail]
 		};
 	}
 
@@ -95,6 +136,16 @@ internal sealed class CameraHealthView
 		private readonly UiState<string> _details = new(Details(camera, null));
 
 		private IFrameStream? _stream;
+
+		public CameraDefinition Camera => camera;
+
+		public LocalizedString State => _state.Value;
+
+		public string Color => _stateColor.Value;
+
+		public string Summary => _details.Value;
+
+		public IFrameStream? Stream => _stream;
 
 		public void Update()
 		{
@@ -127,85 +178,23 @@ internal sealed class CameraHealthView
 			_details.Set(Details(camera, _stream));
 		}
 
-		public UiStack Build()
+		public UiConfigListItem BuildListItem(UiState<string?> selected)
 		{
-			return new UiStack
+			return new UiConfigListItem
 			{
-				Key = $"health-row-{index}",
-				Direction = UiValue.Of(UiComponentDirections.Horizontal),
-				Fill = true,
-				Align = UiValue.Of(UiComponentAlignments.Center),
-				Gap = 0.02,
-				Padding = 0.025,
-				Background = UiValue.Of("#11161d"),
-				Children =
+				Key = $"health-item-{index}",
+				Label = camera.Name,
+				Description = UiText.FromLocalized(() => _state.Value),
+				Severity = UiValue.From(() => _stateColor.Value switch
+				{
+					LiveColor => "success",
+					OfflineColor => "error",
+					_ => "warning"
+				}),
+				Selected = UiValue.From(() => selected.Value == camera.Id),
+				Events =
 				[
-					new UiStack
-					{
-						Key = $"health-name-{index}",
-						Fill = true,
-						Direction = UiValue.Of(UiComponentDirections.Vertical),
-						Gap = 0.006,
-						Children =
-						[
-							new UiTextRun
-							{
-								Key = $"health-name-text-{index}",
-								Text = camera.Name,
-								Size = 0.04,
-								MinSize = 0.028,
-								MaxLines = 1
-							},
-							new UiTextRun
-							{
-								Key = $"health-details-{index}",
-								Text = UiText.From(() => _details.Value),
-								Size = 0.028,
-								MinSize = 0.02,
-								Role = UiValue.Of(UiComponentTextRoles.Secondary),
-								MaxLines = 1
-							}
-						]
-					},
-					new UiTextRun
-					{
-						Key = $"health-state-{index}",
-						Text = UiText.FromLocalized(() => _state.Value),
-						Size = 0.035,
-						MinSize = 0.024,
-						Color = UiValue.From(() => _stateColor.Value),
-						MaxLines = 1
-					},
-					new UiButton
-					{
-						Key = $"health-retry-{index}",
-						MainSize = UiSize.FromBasis(0.12),
-						Events =
-						[
-							UiEventHandler.OnAsync(
-								UiComponentEvents.Press,
-								async cancellationToken =>
-								{
-									if (_stream is not null)
-									{
-										await _stream.RestartAsync().ConfigureAwait(false);
-									}
-								})
-						],
-						Children =
-						[
-							new UiTextRun
-							{
-								Key = $"health-retry-text-{index}",
-								Text = Strings.Health.Retry(),
-								Size = 0.03,
-								MinSize = 0.022,
-								Align = UiValue.Of(UiComponentAlignments.Center),
-								Color = UiValue.Of("#ffffff"),
-								MaxLines = 1
-							}
-						]
-					}
+					UiEventHandler.On(UiConfigEvents.Activate, () => selected.Value = camera.Id)
 				]
 			};
 		}

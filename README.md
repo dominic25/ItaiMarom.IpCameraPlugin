@@ -43,8 +43,9 @@ camera picture is a local test stream.
   rate and maximum width.
 - **Offline feedback**: a camera that drops out shows "The camera is offline. Reconnecting." on its
   widget, and the integration page offers a Retry action.
-- **A camera health page**: a Cameras tab on the integration page lists every camera's state, source,
-  resolution and last-frame age, with a Retry button that restarts that camera.
+- **A camera health page**: a Cameras tab on the integration page with a camera rail and a detail pane
+  showing the selected camera's state, source, resolution and last-frame age, plus a Retry button that
+  restarts that camera.
 - **A Save snapshot action**: writes the pressed camera's current picture as a JPEG. The folder is set
   per action; empty means `Pictures\IP Camera`.
 - **A camera wall folder view**: replace a folder's widget grid with one camera or up to four in a
