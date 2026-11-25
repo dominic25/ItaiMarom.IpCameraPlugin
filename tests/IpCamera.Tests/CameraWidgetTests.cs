@@ -366,8 +366,8 @@ public sealed class CameraWidgetTests
 
 		Assert.Multiple(() =>
 		{
-			Assert.That(ContainsId(ui.Tree.Root, "cell-0-arrows-left"), Is.True);
-			Assert.That(ContainsId(ui.Tree.Root, "cell-3-arrows-right"), Is.True);
+			Assert.That(ContainsId(ui.Tree.Root, "c0-left"), Is.True);
+			Assert.That(ContainsId(ui.Tree.Root, "c3-right"), Is.True);
 		});
 	}
 

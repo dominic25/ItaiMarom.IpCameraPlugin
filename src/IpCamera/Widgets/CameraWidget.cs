@@ -335,7 +335,7 @@ internal static class CameraWidget
 		if (control is not null &&
 			controlsFinder?.Invoke(cameraId)?.Definition is { } definition)
 		{
-			children.Add(ArrowPad(definition, controlsOpacity, control, $"cell-{index}-arrows"));
+			children.Add(ArrowPad(definition, controlsOpacity, control, $"c{index}"));
 		}
 
 		if (children.Count == 1)
@@ -362,32 +362,48 @@ internal static class CameraWidget
 			Key = keyPrefix,
 			Fill = true,
 			Direction = UiValue.Of(UiComponentDirections.Vertical),
-			Justify = UiValue.Of(UiComponentJustify.End),
-			Align = UiValue.Of(UiComponentAlignments.End),
-			Padding = 0.02,
 			Children =
 			[
+				ArrowRow(
+					keyPrefix + "-top",
+					UiComponentJustify.Center,
+					Arrow(keyPrefix + "-up", "\u25B2", camera, CameraControlOperation.MoveUp, opacity, control)),
 				new UiStack
 				{
-					Key = keyPrefix + "-row",
+					Key = keyPrefix + "-middle",
 					Fill = true,
 					Direction = UiValue.Of(UiComponentDirections.Horizontal),
-					Justify = UiValue.Of(UiComponentJustify.End),
-					Align = UiValue.Of(UiComponentAlignments.End),
-					Gap = 0.006,
+					Justify = UiValue.Of(UiComponentJustify.SpaceBetween),
+					Align = UiValue.Of(UiComponentAlignments.Center),
+					Padding = 0.02,
 					Children =
 					[
 						Arrow(keyPrefix + "-left", "\u25C0", camera, CameraControlOperation.MoveLeft, opacity, control),
-						Arrow(keyPrefix + "-up", "\u25B2", camera, CameraControlOperation.MoveUp, opacity, control),
-						Arrow(keyPrefix + "-down", "\u25BC", camera, CameraControlOperation.MoveDown, opacity, control),
 						Arrow(keyPrefix + "-right", "\u25B6", camera, CameraControlOperation.MoveRight, opacity, control)
 					]
-				}
+				},
+				ArrowRow(
+					keyPrefix + "-bottom",
+					UiComponentJustify.Center,
+					Arrow(keyPrefix + "-down", "\u25BC", camera, CameraControlOperation.MoveDown, opacity, control))
 			]
 		};
 	}
 
-	private static UiButton Arrow(
+	private static UiStack ArrowRow(string key, string justify, UiElement arrow)
+	{
+		return new UiStack
+		{
+			Key = key,
+			Direction = UiValue.Of(UiComponentDirections.Horizontal),
+			Justify = UiValue.Of(justify),
+			Align = UiValue.Of(UiComponentAlignments.Center),
+			Padding = 0.02,
+			Children = [arrow]
+		};
+	}
+
+	private static UiModifier Arrow(
 		string key,
 		string glyph,
 		CameraDefinition camera,
@@ -395,33 +411,38 @@ internal static class CameraWidget
 		double opacity,
 		CameraControlHandler control)
 	{
-		return new UiButton
+		return new UiModifier
 		{
-			Key = key,
-			MainSize = UiSize.FromBasis(0.12, 0.12),
-			Fill = false,
-			Background = UiValue.Of("#000000"),
-			Corner = UiValue.Of("50%"),
+			Key = key + "-box",
+			MainSize = UiSize.FromBasis(0.11),
+			Frame = UiValue.Of(new UiFrame { AspectRatio = 1 }),
 			Opacity = UiValue.Of(opacity),
-			Events =
-			[
-				UiEventHandler.OnAsync(
-					UiComponentEvents.Press,
-					cancellationToken => control(camera, operation, cancellationToken))
-			],
-			Children =
-			[
-				new UiTextRun
-				{
-					Key = key + "-glyph",
-					Text = glyph,
-					Size = 0.045,
-					MinSize = 0.025,
-					Align = UiValue.Of(UiComponentAlignments.Center),
-					Color = UiValue.Of("#ffffff"),
-					MaxLines = 1
-				}
-			]
+			Child = new UiButton
+			{
+				Key = key,
+				Justify = UiValue.Of(UiComponentJustify.Center),
+				Align = UiValue.Of(UiComponentAlignments.Center),
+				Background = UiValue.Of("#000000"),
+				Events =
+				[
+					UiEventHandler.OnAsync(
+						UiComponentEvents.Press,
+						cancellationToken => control(camera, operation, cancellationToken))
+				],
+				Children =
+				[
+					new UiTextRun
+					{
+						Key = key + "-g",
+						Text = glyph,
+						Size = 0.04,
+						MinSize = 0.02,
+						Align = UiValue.Of(UiComponentAlignments.Center),
+						Color = UiValue.Of("#ffffff"),
+						MaxLines = 1
+					}
+				]
+			}
 		};
 	}
 
