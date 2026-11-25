@@ -162,3 +162,5 @@ local-feed/*
 
 # Packed plugin releases
 artifacts/
+
+artifacts-test/
