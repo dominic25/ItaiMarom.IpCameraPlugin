@@ -406,7 +406,7 @@ internal sealed class CameraOverlay(Func<IFrameStream?> findStream)
 		DateTimeOffset? lastFrameAt,
 		DateTimeOffset now)
 	{
-		if (hasFailed)
+		if (hasFailed || (state != VideoStreamState.Connected && lastFrameAt is not null))
 		{
 			return (Strings.Widgets.Camera.Overlay.Reconnecting(), PendingColor);
 		}

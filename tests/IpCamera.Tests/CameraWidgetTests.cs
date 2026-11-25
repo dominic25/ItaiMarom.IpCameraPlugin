@@ -121,6 +121,19 @@ public sealed class CameraWidgetTests
 	}
 
 	[Test]
+	public void A_dropped_stream_that_has_shown_a_frame_is_reconnecting()
+	{
+		var (text, color) = CameraOverlay.Describe(
+			VideoStreamState.Disconnected,
+			false,
+			DateTimeOffset.UtcNow.AddSeconds(-30),
+			DateTimeOffset.UtcNow);
+
+		Assert.That(text.Key.Name, Is.EqualTo("Widgets.Camera.Overlay.Reconnecting"));
+		Assert.That(color, Is.EqualTo(CameraOverlay.PendingColor));
+	}
+
+	[Test]
 	public void The_overlay_says_connecting_before_a_frame()
 	{
 		var (text, color) = CameraOverlay.Describe(
