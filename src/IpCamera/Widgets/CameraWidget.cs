@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using IpCamera.Actions;
+using IpCamera.Cameras;
 using IpCamera.Streaming;
 using MacroDeck.Localization;
 using MacroDeck.Sdk.Ui;
@@ -20,6 +21,12 @@ using MacroDeck.Ui.Widgets;
 
 namespace IpCamera.Widgets;
 
+/// <summary>Runs one control for the arrows drawn on a widget cell.</summary>
+internal delegate Task CameraControlHandler(
+	CameraDefinition camera,
+	CameraControlOperation operation,
+	CancellationToken cancellationToken);
+
 /// <summary>The widget type the plugin offers, its picker sample, its live view and its editor.</summary>
 internal static class CameraWidget
 {
@@ -29,6 +36,8 @@ internal static class CameraWidget
 	public const string FitKey = "fit";
 	public const string OverlayKey = "overlay";
 	public const string OverlayBackgroundKey = "overlayBackground";
+	public const string ControlsKey = "controls";
+	public const string ControlsOpacityKey = "controlsOpacity";
 	public const string LayoutKey = "layout";
 	public const string Camera2Key = "camera2";
 	public const string Camera3Key = "camera3";
@@ -53,6 +62,8 @@ internal static class CameraWidget
 		    "fit": { "type": "string" },
 		    "overlay": { "type": "boolean" },
 		    "overlayBackground": { "type": "number" },
+		    "controls": { "type": "boolean" },
+		    "controlsOpacity": { "type": "number" },
 		    "flows": { "type": "array" },
 		    "backgroundColor": { "type": "string" },
 		    "label": { "type": "string" },
@@ -73,7 +84,7 @@ internal static class CameraWidget
 			TypeId,
 			Strings.Widgets.Camera.Name(),
 			Strings.Widgets.Camera.Description(),
-			DefaultData: $$"""{"{{CameraKey}}":"","{{FitKey}}":"{{FitCover}}","{{OverlayKey}}":true,"{{OverlayBackgroundKey}}":0,"{{LayoutKey}}":"{{LayoutSingle}}"}""",
+			DefaultData: $$"""{"{{CameraKey}}":"","{{FitKey}}":"{{FitCover}}","{{OverlayKey}}":true,"{{OverlayBackgroundKey}}":0,"{{ControlsKey}}":false,"{{ControlsOpacityKey}}":60,"{{LayoutKey}}":"{{LayoutSingle}}"}""",
 			DataSchema: DataSchema,
 			HasConfiguration: true)
 		{
@@ -92,13 +103,14 @@ internal static class CameraWidget
 
 	public static UiElement BuildView(UiSurface surface, string? providerId)
 	{
-		return BuildView(surface, providerId, null).Root;
+		return BuildView(surface, providerId, null, null).Root;
 	}
 
 	public static CameraWidgetView BuildView(
 		UiSurface surface,
 		string? providerId,
-		Func<string, IFrameStream?>? findStream)
+		Func<string, IFrameStream?>? findStream,
+		CameraControlHandler? control = null)
 	{
 		var data = UiWidgetSurface.Data(surface);
 		var cameraId = ReadString(data, CameraKey);
@@ -114,9 +126,12 @@ internal static class CameraWidget
 		var fit = ReadString(data, FitKey) == FitContain ? FitContain : FitCover;
 		var layout = ReadLayout(data);
 		var overlays = new List<CameraOverlay>();
+		var controlsEnabled = ReadBool(data, ControlsKey) && control is not null;
+		var controlsOpacity = Math.Clamp(ReadNumber(data, ControlsOpacityKey, 60), 0, 100) / 100.0;
 
 		UiElement content;
 		CameraOverlay? overlay = null;
+		UiElement? arrows = null;
 
 		if (layout is LayoutSplit or LayoutGrid)
 		{
@@ -126,7 +141,10 @@ internal static class CameraWidget
 				providerId,
 				fit,
 				findStream,
-				overlays);
+				overlays,
+				controlsEnabled,
+				controlsOpacity,
+				control);
 		}
 		else
 		{
@@ -147,6 +165,11 @@ internal static class CameraWidget
 				overlay.Update();
 				overlays.Add(overlay);
 			}
+
+			if (controlsEnabled && findStream?.Invoke(cameraId)?.Definition is { } definition)
+			{
+				arrows = ArrowPad(definition, controlsOpacity, control!, "arrows");
+			}
 		}
 
 		var children = new List<UiElement> { content };
@@ -159,6 +182,11 @@ internal static class CameraWidget
 		if (overlay is not null)
 		{
 			children.Add(overlay.Build());
+		}
+
+		if (arrows is not null)
+		{
+			children.Add(arrows);
 		}
 
 		var root = new UiStack
@@ -188,7 +216,10 @@ internal static class CameraWidget
 		string providerId,
 		string fit,
 		Func<string, IFrameStream?>? findStream,
-		List<CameraOverlay> overlays)
+		List<CameraOverlay> overlays,
+		bool controlsEnabled,
+		double controlsOpacity,
+		CameraControlHandler? control)
 	{
 		string?[] cameras = layout == LayoutSplit
 			?
@@ -204,7 +235,7 @@ internal static class CameraWidget
 				ReadString(data, Camera4Key)
 			];
 
-		var overlaysEnabled = ReadBool(data, OverlayKey) && findStream is not null;
+		var overlayEnabled = ReadBool(data, OverlayKey) && findStream is not null;
 		var opacity = Math.Clamp(ReadNumber(data, OverlayBackgroundKey, 0), 0, 100);
 		var cells = cameras
 			.Select((camera, index) => BuildCell(
@@ -212,9 +243,12 @@ internal static class CameraWidget
 				providerId,
 				fit,
 				index,
-				overlaysEnabled ? findStream : null,
+				overlayEnabled ? findStream : null,
 				opacity,
-				overlays))
+				overlays,
+				controlsEnabled ? findStream : null,
+				controlsOpacity,
+				control))
 			.ToList();
 
 		if (layout == LayoutSplit)
@@ -262,7 +296,10 @@ internal static class CameraWidget
 		int index,
 		Func<string, IFrameStream?>? findStream,
 		double backgroundOpacity,
-		List<CameraOverlay> overlays)
+		List<CameraOverlay> overlays,
+		Func<string, IFrameStream?>? controlsFinder,
+		double controlsOpacity,
+		CameraControlHandler? control)
 	{
 		if (string.IsNullOrEmpty(cameraId))
 		{
@@ -282,23 +319,109 @@ internal static class CameraWidget
 				$"cell-{index}-fallback")
 		};
 
-		if (findStream is null)
+		var children = new List<UiElement> { video };
+
+		if (findStream is not null)
+		{
+			var overlay = new CameraOverlay(
+				() => findStream(cameraId),
+				backgroundOpacity,
+				$"cell-{index}-status");
+			overlay.Update();
+			overlays.Add(overlay);
+			children.Add(overlay.Build());
+		}
+
+		if (control is not null &&
+			controlsFinder?.Invoke(cameraId)?.Definition is { } definition)
+		{
+			children.Add(ArrowPad(definition, controlsOpacity, control, $"cell-{index}-arrows"));
+		}
+
+		if (children.Count == 1)
 		{
 			return video;
 		}
-
-		var overlay = new CameraOverlay(
-			() => findStream(cameraId),
-			backgroundOpacity,
-			$"cell-{index}-status");
-		overlay.Update();
-		overlays.Add(overlay);
 
 		return new UiLayer
 		{
 			Key = $"cell-{index}-layer",
 			Fill = true,
-			Children = [video, overlay.Build()]
+			Children = children
+		};
+	}
+
+	private static UiStack ArrowPad(
+		CameraDefinition camera,
+		double opacity,
+		CameraControlHandler control,
+		string keyPrefix)
+	{
+		return new UiStack
+		{
+			Key = keyPrefix,
+			Fill = true,
+			Direction = UiValue.Of(UiComponentDirections.Vertical),
+			Justify = UiValue.Of(UiComponentJustify.End),
+			Align = UiValue.Of(UiComponentAlignments.End),
+			Padding = 0.02,
+			Children =
+			[
+				new UiStack
+				{
+					Key = keyPrefix + "-row",
+					Fill = true,
+					Direction = UiValue.Of(UiComponentDirections.Horizontal),
+					Justify = UiValue.Of(UiComponentJustify.End),
+					Align = UiValue.Of(UiComponentAlignments.End),
+					Gap = 0.006,
+					Children =
+					[
+						Arrow(keyPrefix + "-left", "\u25C0", camera, CameraControlOperation.MoveLeft, opacity, control),
+						Arrow(keyPrefix + "-up", "\u25B2", camera, CameraControlOperation.MoveUp, opacity, control),
+						Arrow(keyPrefix + "-down", "\u25BC", camera, CameraControlOperation.MoveDown, opacity, control),
+						Arrow(keyPrefix + "-right", "\u25B6", camera, CameraControlOperation.MoveRight, opacity, control)
+					]
+				}
+			]
+		};
+	}
+
+	private static UiButton Arrow(
+		string key,
+		string glyph,
+		CameraDefinition camera,
+		CameraControlOperation operation,
+		double opacity,
+		CameraControlHandler control)
+	{
+		return new UiButton
+		{
+			Key = key,
+			MainSize = UiSize.FromBasis(0.12, 0.12),
+			Fill = false,
+			Background = UiValue.Of("#000000"),
+			Corner = UiValue.Of("50%"),
+			Opacity = UiValue.Of(opacity),
+			Events =
+			[
+				UiEventHandler.OnAsync(
+					UiComponentEvents.Press,
+					cancellationToken => control(camera, operation, cancellationToken))
+			],
+			Children =
+			[
+				new UiTextRun
+				{
+					Key = key + "-glyph",
+					Text = glyph,
+					Size = 0.045,
+					MinSize = 0.025,
+					Align = UiValue.Of(UiComponentAlignments.Center),
+					Color = UiValue.Of("#ffffff"),
+					MaxLines = 1
+				}
+			]
 		};
 	}
 
@@ -343,6 +466,9 @@ internal static class CameraWidget
 		var overlay = new UiState<bool>(ReadBool(data, OverlayKey));
 		var overlayBackground = new UiState<double>(
 			Math.Clamp(ReadNumber(data, OverlayBackgroundKey, 0), 0, 100));
+		var controls = new UiState<bool>(ReadBool(data, ControlsKey));
+		var controlsOpacity = new UiState<double>(
+			Math.Clamp(ReadNumber(data, ControlsOpacityKey, 60), 0, 100));
 		var flows = new UiState<JsonElement>(
 			data.ValueKind == JsonValueKind.Object &&
 			data.TryGetProperty("flows", out var stored) &&
@@ -436,6 +562,24 @@ internal static class CameraWidget
 						Step = 5,
 						ShowSlider = true,
 						Binding = Bind.To(overlayBackground)
+					},
+					new UiBooleanInput
+					{
+						Key = ControlsKey,
+						Label = Strings.Widgets.Camera.Config.Controls(),
+						Description = Strings.Widgets.Camera.Config.ControlsDescription(),
+						Binding = Bind.To(controls)
+					},
+					new UiNumberInput
+					{
+						Key = ControlsOpacityKey,
+						Label = Strings.Widgets.Camera.Config.ControlsOpacity(),
+						Description = Strings.Widgets.Camera.Config.ControlsOpacityDescription(),
+						Min = 0,
+						Max = 100,
+						Step = 5,
+						ShowSlider = true,
+						Binding = Bind.To(controlsOpacity)
 					},
 					UiWidgetAppearance.Section(data, UiWidgetAppearanceFields.All)
 				]

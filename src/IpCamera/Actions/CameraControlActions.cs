@@ -176,116 +176,13 @@ internal sealed class CameraControlAction : IActionDefinition, IDynamicOptionsAc
 				return error;
 			}
 
-			return camera.Definition!.Control switch
-			{
-				CameraControlKind.None => ActionResult.Failed(
-					ActionErrorCodes.Unavailable,
-					Strings.Actions.Control.Disabled()),
-				CameraControlKind.Xiaomi => await ControlXiaomiAsync(
-					camera.Definition,
-					context.CancellationToken).ConfigureAwait(false),
-				_ => await ControlOnvifAsync(
-					camera.Definition,
-					context.CancellationToken).ConfigureAwait(false)
-			};
-		}
-
-		private async Task<ActionResult> ControlXiaomiAsync(
-			CameraDefinition camera,
-			CancellationToken cancellationToken)
-		{
-			if (string.IsNullOrEmpty(camera.ControlHost) || string.IsNullOrEmpty(camera.ControlToken))
-			{
-				return ActionResult.Failed(
-					ActionErrorCodes.NotConfigured,
-					Strings.Actions.Control.XiaomiNotConfigured());
-			}
-
-			var endpoint = new MiioEndpoint(
-				HostOf(camera.ControlHost),
-				MiioEndpoint.DefaultPort,
-				camera.ControlToken);
-
-			// A motor command is a single step, so there is nothing left to stop.
-			if (action._operation == CameraControlOperation.Stop)
-			{
-				return ActionResult.Success();
-			}
-
-			var result = action._operation switch
-			{
-				CameraControlOperation.MoveLeft => await action._miio.SetMotorAsync(endpoint, 1, cancellationToken)
-					.ConfigureAwait(false),
-				CameraControlOperation.MoveRight => await action._miio.SetMotorAsync(endpoint, 2, cancellationToken)
-					.ConfigureAwait(false),
-				CameraControlOperation.MoveUp => await action._miio.SetMotorAsync(endpoint, 3, cancellationToken)
-					.ConfigureAwait(false),
-				CameraControlOperation.MoveDown => await action._miio.SetMotorAsync(endpoint, 4, cancellationToken)
-					.ConfigureAwait(false),
-				CameraControlOperation.NightAuto => await action._miio.SetNightModeAsync(endpoint, 0, cancellationToken)
-					.ConfigureAwait(false),
-				CameraControlOperation.NightOff => await action._miio.SetNightModeAsync(endpoint, 1, cancellationToken)
-					.ConfigureAwait(false),
-				CameraControlOperation.NightOn => await action._miio.SetNightModeAsync(endpoint, 2, cancellationToken)
-					.ConfigureAwait(false),
-				_ => MiioResult.Failure("unsupported operation")
-			};
-
-			if (result.Succeeded)
-			{
-				return ActionResult.Success();
-			}
-
-			action._logger.Information(
-				"Xiaomi control {Operation} on {Camera} failed: {Reason}",
+			return await CameraControl.ExecuteAsync(
+				camera.Definition!,
 				action._operation,
-				camera.Name,
-				result.Reason);
-
-			return ActionResult.Failed(
-				ActionErrorCodes.Unavailable,
-				Strings.Actions.Control.XiaomiFailed());
-		}
-
-		private async Task<ActionResult> ControlOnvifAsync(
-			CameraDefinition camera,
-			CancellationToken cancellationToken)
-		{
-			var host = string.IsNullOrEmpty(camera.ControlHost)
-				? camera.Url.Host
-				: HostOf(camera.ControlHost);
-
-			var device = new OnvifDevice(
-				$"http://{host}/onvif/device_service",
-				camera.Name,
-				null);
-
-			var succeeded = action._operation switch
-			{
-				CameraControlOperation.MoveLeft => await action._onvif.MoveAsync(
-					device, camera.Username, camera.Password, "left", 0.5, cancellationToken).ConfigureAwait(false),
-				CameraControlOperation.MoveRight => await action._onvif.MoveAsync(
-					device, camera.Username, camera.Password, "right", 0.5, cancellationToken).ConfigureAwait(false),
-				CameraControlOperation.MoveUp => await action._onvif.MoveAsync(
-					device, camera.Username, camera.Password, "up", 0.5, cancellationToken).ConfigureAwait(false),
-				CameraControlOperation.MoveDown => await action._onvif.MoveAsync(
-					device, camera.Username, camera.Password, "down", 0.5, cancellationToken).ConfigureAwait(false),
-				CameraControlOperation.Stop => await action._onvif.StopAsync(
-					device, camera.Username, camera.Password, cancellationToken).ConfigureAwait(false),
-				CameraControlOperation.NightAuto => await action._onvif.SetIrAsync(
-					device, camera.Username, camera.Password, "AUTO", cancellationToken).ConfigureAwait(false),
-				CameraControlOperation.NightOn => await action._onvif.SetIrAsync(
-					device, camera.Username, camera.Password, "ON", cancellationToken).ConfigureAwait(false),
-				CameraControlOperation.NightOff => await action._onvif.SetIrAsync(
-					device, camera.Username, camera.Password, "OFF", cancellationToken).ConfigureAwait(false),
-				_ => false
-			};
-
-			return succeeded
-				? ActionResult.Success()
-				: ActionResult.Failed(
-					ActionErrorCodes.Unavailable,
-					Strings.Actions.Control.Failed());
+				action._onvif,
+				action._miio,
+				action._logger,
+				context.CancellationToken).ConfigureAwait(false);
 		}
 
 		private async Task<CameraSelection> ResolveCameraAsync(ActionExecutionContext context)
@@ -373,6 +270,156 @@ internal sealed class CameraControlAction : IActionDefinition, IDynamicOptionsAc
 	}
 
 	private sealed record CameraSelection(CameraDefinition? Definition, ActionResult? Error);
+}
+
+/// <summary>
+/// Runs one control against one camera over ONVIF or miIO. Shared by the actions and by the arrows on
+/// the widget, so both take the same path to the device.
+/// </summary>
+internal static class CameraControl
+{
+	public static async Task<ActionResult> ExecuteAsync(
+		CameraDefinition camera,
+		CameraControlOperation operation,
+		IOnvifClient onvif,
+		IMiioClient miio,
+		ILogger logger,
+		CancellationToken cancellationToken)
+	{
+		return camera.Control switch
+		{
+			CameraControlKind.None => ActionResult.Failed(
+				ActionErrorCodes.Unavailable,
+				Strings.Actions.Control.Disabled()),
+			CameraControlKind.Xiaomi => await ControlXiaomiAsync(
+				camera,
+				operation,
+				miio,
+				logger,
+				cancellationToken).ConfigureAwait(false),
+			_ => await ControlOnvifAsync(
+				camera,
+				operation,
+				onvif,
+				cancellationToken).ConfigureAwait(false)
+		};
+	}
+
+	private static async Task<ActionResult> ControlXiaomiAsync(
+		CameraDefinition camera,
+		CameraControlOperation operation,
+		IMiioClient miio,
+		ILogger logger,
+		CancellationToken cancellationToken)
+	{
+		if (string.IsNullOrEmpty(camera.ControlHost) || string.IsNullOrEmpty(camera.ControlToken))
+		{
+			return ActionResult.Failed(
+				ActionErrorCodes.NotConfigured,
+				Strings.Actions.Control.XiaomiNotConfigured());
+		}
+
+		var endpoint = new MiioEndpoint(
+			HostOf(camera.ControlHost),
+			MiioEndpoint.DefaultPort,
+			camera.ControlToken);
+
+		// A motor command is a single step, so there is nothing left to stop.
+		if (operation == CameraControlOperation.Stop)
+		{
+			return ActionResult.Success();
+		}
+
+		var result = operation switch
+		{
+			CameraControlOperation.MoveLeft => await miio.SetMotorAsync(endpoint, 1, cancellationToken)
+				.ConfigureAwait(false),
+			CameraControlOperation.MoveRight => await miio.SetMotorAsync(endpoint, 2, cancellationToken)
+				.ConfigureAwait(false),
+			CameraControlOperation.MoveUp => await miio.SetMotorAsync(endpoint, 3, cancellationToken)
+				.ConfigureAwait(false),
+			CameraControlOperation.MoveDown => await miio.SetMotorAsync(endpoint, 4, cancellationToken)
+				.ConfigureAwait(false),
+			CameraControlOperation.NightAuto => await miio.SetNightModeAsync(endpoint, 0, cancellationToken)
+				.ConfigureAwait(false),
+			CameraControlOperation.NightOff => await miio.SetNightModeAsync(endpoint, 1, cancellationToken)
+				.ConfigureAwait(false),
+			CameraControlOperation.NightOn => await miio.SetNightModeAsync(endpoint, 2, cancellationToken)
+				.ConfigureAwait(false),
+			_ => MiioResult.Failure("unsupported operation")
+		};
+
+		if (result.Succeeded)
+		{
+			return ActionResult.Success();
+		}
+
+		logger.Information(
+			"Xiaomi control {Operation} on {Camera} failed: {Reason}",
+			operation,
+			camera.Name,
+			result.Reason);
+
+		return ActionResult.Failed(
+			ActionErrorCodes.Unavailable,
+			Strings.Actions.Control.XiaomiFailed());
+	}
+
+	private static async Task<ActionResult> ControlOnvifAsync(
+		CameraDefinition camera,
+		CameraControlOperation operation,
+		IOnvifClient onvif,
+		CancellationToken cancellationToken)
+	{
+		var host = string.IsNullOrEmpty(camera.ControlHost)
+			? camera.Url.Host
+			: HostOf(camera.ControlHost);
+
+		var device = new OnvifDevice(
+			$"http://{host}/onvif/device_service",
+			camera.Name,
+			null);
+
+		var succeeded = operation switch
+		{
+			CameraControlOperation.MoveLeft => await onvif.MoveAsync(
+				device, camera.Username, camera.Password, "left", 0.5, cancellationToken).ConfigureAwait(false),
+			CameraControlOperation.MoveRight => await onvif.MoveAsync(
+				device, camera.Username, camera.Password, "right", 0.5, cancellationToken).ConfigureAwait(false),
+			CameraControlOperation.MoveUp => await onvif.MoveAsync(
+				device, camera.Username, camera.Password, "up", 0.5, cancellationToken).ConfigureAwait(false),
+			CameraControlOperation.MoveDown => await onvif.MoveAsync(
+				device, camera.Username, camera.Password, "down", 0.5, cancellationToken).ConfigureAwait(false),
+			CameraControlOperation.Stop => await onvif.StopAsync(
+				device, camera.Username, camera.Password, cancellationToken).ConfigureAwait(false),
+			CameraControlOperation.NightAuto => await onvif.SetIrAsync(
+				device, camera.Username, camera.Password, "AUTO", cancellationToken).ConfigureAwait(false),
+			CameraControlOperation.NightOn => await onvif.SetIrAsync(
+				device, camera.Username, camera.Password, "ON", cancellationToken).ConfigureAwait(false),
+			CameraControlOperation.NightOff => await onvif.SetIrAsync(
+				device, camera.Username, camera.Password, "OFF", cancellationToken).ConfigureAwait(false),
+			_ => false
+		};
+
+		return succeeded
+			? ActionResult.Success()
+			: ActionResult.Failed(
+				ActionErrorCodes.Unavailable,
+				Strings.Actions.Control.Failed());
+	}
+
+	private static string HostOf(string value)
+	{
+		var text = value.Trim();
+		var scheme = text.IndexOf("://", StringComparison.Ordinal);
+		if (scheme >= 0)
+		{
+			text = text[(scheme + 3)..];
+		}
+
+		var slash = text.IndexOf('/');
+		return slash >= 0 ? text[..slash] : text;
+	}
 }
 
 /// <summary>The control a user asked for, independent of the protocol that carries it.</summary>

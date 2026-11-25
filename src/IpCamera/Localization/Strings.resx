@@ -97,6 +97,18 @@
   <data name="Widgets.Camera.Config.OverlayBackgroundDescription" xml:space="preserve">
     <value>Opacity of the dark strip behind the live indicator. 0 hides it.</value>
   </data>
+  <data name="Widgets.Camera.Config.Controls" xml:space="preserve">
+    <value>Movement arrows</value>
+  </data>
+  <data name="Widgets.Camera.Config.ControlsDescription" xml:space="preserve">
+    <value>Show left, right, up and down buttons for the camera on this cell. They move a Xiaomi or ONVIF camera without leaving the deck.</value>
+  </data>
+  <data name="Widgets.Camera.Config.ControlsOpacity" xml:space="preserve">
+    <value>Arrow transparency</value>
+  </data>
+  <data name="Widgets.Camera.Config.ControlsOpacityDescription" xml:space="preserve">
+    <value>0 hides the arrows completely, 100 keeps them solid.</value>
+  </data>
   <data name="Widgets.Camera.Overlay.Live" xml:space="preserve">
     <value>LIVE</value>
   </data>

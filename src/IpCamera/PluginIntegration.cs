@@ -254,7 +254,17 @@ internal sealed class PluginIntegration : IPluginIntegration,
 		if (UiWidgetSurface.IsFor(surface, widgetTypeId))
 		{
 			var providerId = await ResolveProviderIdAsync(cancellationToken).ConfigureAwait(false);
-			var view = CameraWidget.BuildView(surface, providerId, _registry.Find);
+			var view = CameraWidget.BuildView(
+				surface,
+				providerId,
+				_registry.Find,
+				(camera, operation, cancellationToken) => CameraControl.ExecuteAsync(
+					camera,
+					operation,
+					_onvifClient,
+					_miioClient,
+					_logger,
+					cancellationToken));
 			return new ViewSession(
 				new UiView(surface, view.Root),
 				view.Overlays.Count == 0

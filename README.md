@@ -32,7 +32,8 @@ camera picture is a local test stream.
 - **A Camera widget**: one, two or four cameras on the same tile. Pick a camera per cell, choose whether
   the pictures fill their cell or fit inside it, and give the widget a label, background and colours. A
   short press opens the first camera in a modal as large as Macro Deck's fixed dialog box allows; the
-  status overlay is available on the single-camera layout.
+  status overlay is available on every configured cell. Each cell can also show optional left, right,
+  up and down arrows with their own opacity, so a Xiaomi or ONVIF camera can be moved from the deck.
 - **A video stream provider**: every configured camera is listed under Source in any widget or action
   that can show a video stream, not only in this plugin's own widget.
 - **A camera setup flow**: one Macro Deck configuration entry per camera. The flow fetches one frame
@@ -53,8 +54,9 @@ camera picture is a local test stream.
   has no camera tile; left empty it controls the camera of the pressed widget. ONVIF cameras use
   `http://<address>/onvif/device_service` and may set the camera's own address when the stream goes
   through a relay. Xiaomi cameras move over the local miIO channel with the camera address and the
-  device token from Mi Home, entered in the camera's advanced settings. A camera that only speaks a
-  vendor API is not covered yet.
+  device token from Mi Home, entered in the camera's advanced settings. The camera widget can also draw
+  optional movement arrows, with an opacity slider, on every configured cell. A camera that only speaks
+  a vendor API is not covered yet.
 - **A status overlay** (optional, off for existing widgets): a small live dot and the age of the last
   frame on the tile, or "RECONNECTING" when the source drops. New widgets enable it by default. It can
   be turned off in the widget settings, and a background opacity slider controls the dark strip behind

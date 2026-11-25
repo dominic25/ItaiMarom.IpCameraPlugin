@@ -1,5 +1,7 @@
 using System.Text.Json;
 using IpCamera.Actions;
+using IpCamera.Cameras;
+using IpCamera.Streaming;
 using IpCamera.Widgets;
 using MacroDeck.Sdk.VideoStreams;
 using MacroDeck.Ui.Model.Nodes;
@@ -306,6 +308,92 @@ public sealed class CameraWidgetTests
 		Assert.That(view.Tree.Root.Type, Is.EqualTo("ui.stack"));
 	}
 
+	[Test]
+	public void The_movement_arrows_appear_when_they_are_enabled()
+	{
+		var surface = Surface(new { camera = "camera-1", controls = true, controlsOpacity = 40 });
+
+		var view = CameraWidget.BuildView(
+			surface,
+			ProviderId,
+			_ => Stream(),
+			(_, _, _) => Task.CompletedTask);
+		using var ui = new UiView(surface, view.Root);
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(ContainsId(ui.Tree.Root, "arrows-left"), Is.True);
+			Assert.That(ContainsId(ui.Tree.Root, "arrows-up"), Is.True);
+			Assert.That(ContainsId(ui.Tree.Root, "arrows-down"), Is.True);
+			Assert.That(ContainsId(ui.Tree.Root, "arrows-right"), Is.True);
+		});
+	}
+
+	[Test]
+	public void The_movement_arrows_stay_off_by_default()
+	{
+		var surface = Surface(new { camera = "camera-1" });
+
+		var view = CameraWidget.BuildView(
+			surface,
+			ProviderId,
+			_ => Stream(),
+			(_, _, _) => Task.CompletedTask);
+		using var ui = new UiView(surface, view.Root);
+
+		Assert.That(ContainsId(ui.Tree.Root, "arrows-left"), Is.False);
+	}
+
+	[Test]
+	public void Every_grid_cell_gets_its_own_arrows()
+	{
+		var surface = Surface(new
+		{
+			camera = "camera-1",
+			camera2 = "camera-2",
+			camera3 = "camera-3",
+			camera4 = "camera-4",
+			layout = CameraWidget.LayoutGrid,
+			controls = true
+		});
+
+		var view = CameraWidget.BuildView(
+			surface,
+			ProviderId,
+			_ => Stream(),
+			(_, _, _) => Task.CompletedTask);
+		using var ui = new UiView(surface, view.Root);
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(ContainsId(ui.Tree.Root, "cell-0-arrows-left"), Is.True);
+			Assert.That(ContainsId(ui.Tree.Root, "cell-3-arrows-right"), Is.True);
+		});
+	}
+
+	[Test]
+	public void The_widget_settings_offer_arrows_and_their_transparency()
+	{
+		var surface = new UiSurface
+		{
+			Kind = UiSurfaceKinds.Config,
+			SessionMode = UiSessionModes.Exclusive,
+			Attributes = new Dictionary<string, JsonElement>(StringComparer.Ordinal)
+			{
+				["entryPoint"] = JsonSerializer.SerializeToElement("widget-config"),
+				["widgetData"] = JsonSerializer.SerializeToElement(new { camera = "camera-1" })
+			}
+		};
+
+		using var view = new UiView(surface, CameraWidget.BuildConfiguration(surface));
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(ContainsId(view.Tree.Root, "controls"), Is.True);
+			Assert.That(ContainsId(view.Tree.Root, "controlsOpacity"), Is.True);
+		});
+	}
+
 	private static bool Contains(UiNode node, string type)
 	{
 		return node.Type == type || node.Children.Any(child => Contains(child, type));
@@ -339,6 +427,65 @@ public sealed class CameraWidgetTests
 		}
 
 		return null;
+	}
+
+	private static StubStream Stream()
+	{
+		return new StubStream(new CameraDefinition(
+			"camera-1",
+			"Test camera",
+			CameraSourceKind.Mjpeg,
+			new Uri("http://127.0.0.1/camera.mjpeg"),
+			null,
+			null,
+			5,
+			640,
+			"tcp"));
+	}
+
+	private sealed class StubStream(CameraDefinition definition) : IFrameStream
+	{
+		public CameraDefinition Definition => definition;
+
+		public VideoStreamState State => VideoStreamState.Connected;
+
+		public bool HasFailed => false;
+
+		public DateTimeOffset? LastFrameAt => DateTimeOffset.UtcNow;
+
+		public int? Width => 640;
+
+		public int? Height => 360;
+
+		public byte[]? CurrentFrame => null;
+
+		public event EventHandler? StateChanged
+		{
+			add { }
+			remove { }
+		}
+
+		public FrameSubscription Subscribe()
+		{
+			return new FrameSubscription(
+				System.Threading.Channels.Channel.CreateBounded<byte[]>(1).Reader,
+				() => { });
+		}
+
+		public Task RestartAsync()
+		{
+			return Task.CompletedTask;
+		}
+
+		public Task<bool> PrimeAsync(TimeSpan timeout, CancellationToken cancellationToken)
+		{
+			return Task.FromResult(true);
+		}
+
+		public ValueTask DisposeAsync()
+		{
+			return ValueTask.CompletedTask;
+		}
 	}
 
 	private static UiSurface Surface(object data)	{
