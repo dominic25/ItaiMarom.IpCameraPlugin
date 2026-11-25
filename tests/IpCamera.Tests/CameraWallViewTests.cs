@@ -55,6 +55,38 @@ public sealed class CameraWallViewTests
 	}
 
 	[Test]
+	public void An_empty_position_is_skipped()
+	{
+		var config = JsonSerializer.SerializeToElement(new
+		{
+			camera1 = "",
+			camera2 = "camera-2",
+			columns = "2"
+		});
+
+		using var view = new UiView(Surface(), CameraWallView.Build(config, ProviderId));
+
+		Assert.That(CountType(view.Tree.Root, "macrodeck.video-stream"), Is.EqualTo(1));
+	}
+
+	[Test]
+	public void One_column_shows_only_the_configured_cameras()
+	{
+		var config = JsonSerializer.SerializeToElement(new
+		{
+			camera1 = "camera-1",
+			camera2 = "camera-2",
+			camera3 = "",
+			camera4 = "",
+			columns = "1"
+		});
+
+		using var view = new UiView(Surface(), CameraWallView.Build(config, ProviderId));
+
+		Assert.That(CountType(view.Tree.Root, "macrodeck.video-stream"), Is.EqualTo(2));
+	}
+
+	[Test]
 	public void An_empty_wall_draws_the_hint()
 	{
 		var config = JsonSerializer.SerializeToElement(new { columns = "1" });

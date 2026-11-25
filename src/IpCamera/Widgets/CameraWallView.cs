@@ -20,9 +20,10 @@ internal static class CameraWallView
 	{
 		var cameras = _cameraKeys
 			.Select(key => ReadString(configuration, key))
-			.ToArray();
+			.Where(camera => !string.IsNullOrEmpty(camera))
+			.ToList();
 
-		if (string.IsNullOrEmpty(providerId) || cameras.All(string.IsNullOrEmpty))
+		if (string.IsNullOrEmpty(providerId) || cameras.Count == 0)
 		{
 			return Placeholder(Strings.FolderViews.Config.Empty());
 		}
@@ -47,12 +48,11 @@ internal static class CameraWallView
 			};
 		}
 
-		var nonEmpty = cameras.Count(camera => !string.IsNullOrEmpty(camera));
 		var rows = new List<UiElement>();
-		for (var index = 0; index < nonEmpty; index += 2)
+		for (var index = 0; index < cameras.Count; index += 2)
 		{
 			var row = new List<UiElement> { cells[index] };
-			if (index + 1 < nonEmpty)
+			if (index + 1 < cameras.Count)
 			{
 				row.Add(cells[index + 1]);
 			}
