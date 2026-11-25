@@ -87,6 +87,17 @@ public sealed class CameraWallViewTests
 	}
 
 	[Test]
+	public void A_configuration_stored_as_a_string_is_read()
+	{
+		var json = """{"camera1":"camera-1","camera2":"camera-2","columns":"2"}""";
+		var config = JsonSerializer.SerializeToElement(json);
+
+		using var view = new UiView(Surface(), CameraWallView.Build(config, ProviderId));
+
+		Assert.That(CountType(view.Tree.Root, "macrodeck.video-stream"), Is.EqualTo(2));
+	}
+
+	[Test]
 	public void An_empty_wall_draws_the_hint()
 	{
 		var config = JsonSerializer.SerializeToElement(new { columns = "1" });

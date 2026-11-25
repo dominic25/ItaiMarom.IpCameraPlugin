@@ -18,6 +18,8 @@ internal static class CameraWallView
 
 	public static UiStack Build(JsonElement configuration, string? providerId)
 	{
+		configuration = Normalize(configuration);
+
 		var cameras = _cameraKeys
 			.Select(key => ReadString(configuration, key))
 			.Where(camera => !string.IsNullOrEmpty(camera))
@@ -80,6 +82,8 @@ internal static class CameraWallView
 
 	public static UiStack BuildConfiguration(JsonElement configuration)
 	{
+		configuration = Normalize(configuration);
+
 		var camera1 = new UiState<string>(ReadString(configuration, "camera1") ?? string.Empty);
 		var camera2 = new UiState<string>(ReadString(configuration, "camera2") ?? string.Empty);
 		var camera3 = new UiState<string>(ReadString(configuration, "camera3") ?? string.Empty);
@@ -206,6 +210,27 @@ internal static class CameraWallView
 				}
 			]
 		};
+	}
+
+	private static JsonElement Normalize(JsonElement configuration)
+	{
+		if (configuration.ValueKind == JsonValueKind.String)
+		{
+			var text = configuration.GetString();
+			if (!string.IsNullOrWhiteSpace(text))
+			{
+				try
+				{
+					using var document = JsonDocument.Parse(text);
+					return document.RootElement.Clone();
+				}
+				catch (JsonException)
+				{
+				}
+			}
+		}
+
+		return configuration;
 	}
 
 	private static string? ReadString(JsonElement data, string key)
