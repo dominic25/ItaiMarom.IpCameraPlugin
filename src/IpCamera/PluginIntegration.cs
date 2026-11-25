@@ -90,13 +90,7 @@ internal sealed class PluginIntegration : IPluginIntegration,
 		new() { Kind = UiSurfaceKinds.Preview, SessionMode = UiSessionModes.Shared },
 		new() { Kind = UiSurfaceKinds.Config, SessionMode = UiSessionModes.Exclusive },
 		new() { Kind = UiSurfaceKinds.Dialog, SessionMode = UiSessionModes.Exclusive },
-		new() { Kind = UiSurfaceKinds.Page, SessionMode = UiSessionModes.Exclusive },
 		new() { Kind = UiSurfaceKinds.Folder, SessionMode = UiSessionModes.Shared }
-	];
-
-	public IReadOnlyList<UiPageDeclaration> Pages { get; } =
-	[
-		new() { Id = "cameras", Title = Strings.Health.Title() }
 	];
 
 	private static readonly FolderViewDescriptor _cameraWall = new(
@@ -189,25 +183,6 @@ internal sealed class PluginIntegration : IPluginIntegration,
 		cancellationToken.ThrowIfCancellationRequested();
 
 		var surface = request.Surface;
-
-		if (surface.Kind == UiSurfaceKinds.Page &&
-			surface.Attributes.TryGetValue(UiPageSurfaceAttributes.PageId, out var pageId) &&
-			pageId.GetString() == "cameras")
-		{
-			// A page can be opened while the integration is still reading its entries after a reconnect or
-			// an install, which would otherwise render an empty camera list that never catches up.
-			for (var attempt = 0; attempt < 20 && _registry.Cameras.Count == 0; attempt++)
-			{
-				await Task.Delay(100, cancellationToken).ConfigureAwait(false);
-			}
-
-			var health = new CameraHealthView(_registry);
-			health.Update();
-
-			return new ViewSession(
-				new UiView(surface, health.Build()),
-				health.Update);
-		}
 
 		if (surface.Kind == UiSurfaceKinds.Folder &&
 			surface.Attributes.TryGetValue(UiFolderSurfaceAttributes.ViewId, out var folderViewId) &&
