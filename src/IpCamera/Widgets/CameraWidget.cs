@@ -28,6 +28,7 @@ internal static class CameraWidget
 	public const string CameraKey = "camera";
 	public const string FitKey = "fit";
 	public const string OverlayKey = "overlay";
+	public const string OverlayBackgroundKey = "overlayBackground";
 
 	public const string FitContain = "contain";
 	public const string FitCover = "cover";
@@ -39,6 +40,7 @@ internal static class CameraWidget
 		    "camera": { "type": "string" },
 		    "fit": { "type": "string" },
 		    "overlay": { "type": "boolean" },
+		    "overlayBackground": { "type": "number" },
 		    "flows": { "type": "array" },
 		    "backgroundColor": { "type": "string" },
 		    "label": { "type": "string" },
@@ -59,7 +61,7 @@ internal static class CameraWidget
 			TypeId,
 			Strings.Widgets.Camera.Name(),
 			Strings.Widgets.Camera.Description(),
-			DefaultData: $$"""{"{{CameraKey}}":"","{{FitKey}}":"{{FitCover}}","{{OverlayKey}}":true}""",
+			DefaultData: $$"""{"{{CameraKey}}":"","{{FitKey}}":"{{FitCover}}","{{OverlayKey}}":true,"{{OverlayBackgroundKey}}":0}""",
 			DataSchema: DataSchema,
 			HasConfiguration: true)
 		{
@@ -118,7 +120,9 @@ internal static class CameraWidget
 		CameraOverlay? overlay = null;
 		if (ReadBool(data, OverlayKey) && findStream is not null)
 		{
-			overlay = new CameraOverlay(() => findStream(cameraId));
+			overlay = new CameraOverlay(
+				() => findStream(cameraId),
+				Math.Clamp(ReadNumber(data, OverlayBackgroundKey, 0), 0, 100));
 			overlay.Update();
 			children.Add(overlay.Build());
 		}
@@ -179,6 +183,8 @@ internal static class CameraWidget
 		var camera = new UiState<string>(ReadString(data, CameraKey) ?? string.Empty);
 		var fit = new UiState<string>(ReadString(data, FitKey) == FitContain ? FitContain : FitCover);
 		var overlay = new UiState<bool>(ReadBool(data, OverlayKey));
+		var overlayBackground = new UiState<double>(
+			Math.Clamp(ReadNumber(data, OverlayBackgroundKey, 0), 0, 100));
 		var flows = new UiState<JsonElement>(
 			data.ValueKind == JsonValueKind.Object &&
 			data.TryGetProperty("flows", out var stored) &&
@@ -221,6 +227,17 @@ internal static class CameraWidget
 						Label = Strings.Widgets.Camera.Config.Overlay(),
 						Description = Strings.Widgets.Camera.Config.OverlayDescription(),
 						Binding = Bind.To(overlay)
+					},
+					new UiNumberInput
+					{
+						Key = OverlayBackgroundKey,
+						Label = Strings.Widgets.Camera.Config.OverlayBackground(),
+						Description = Strings.Widgets.Camera.Config.OverlayBackgroundDescription(),
+						Min = 0,
+						Max = 100,
+						Step = 5,
+						ShowSlider = true,
+						Binding = Bind.To(overlayBackground)
 					},
 					UiWidgetAppearance.Section(data, UiWidgetAppearanceFields.All)
 				]
@@ -327,13 +344,23 @@ internal static class CameraWidget
 			data.TryGetProperty(key, out var value) &&
 			value.ValueKind == JsonValueKind.True;
 	}
+
+	private static double ReadNumber(JsonElement data, string key, double fallback)
+	{
+		return data.ValueKind == JsonValueKind.Object &&
+			data.TryGetProperty(key, out var value) &&
+			value.ValueKind == JsonValueKind.Number &&
+			value.TryGetDouble(out var number)
+				? number
+				: fallback;
+	}
 }
 
 /// <summary>The widget tree plus the live overlay a session ticks, when the overlay is enabled.</summary>
 internal sealed record CameraWidgetView(UiElement Root, CameraOverlay? Overlay);
 
 /// <summary>The small status pill drawn over the picture: a live dot and the age of the last frame.</summary>
-internal sealed class CameraOverlay(Func<IFrameStream?> findStream)
+internal sealed class CameraOverlay(Func<IFrameStream?> findStream, double backgroundOpacity = 0)
 {
 	public const string LiveColor = "#22c55e";
 	public const string PendingColor = "#f59e0b";
@@ -356,6 +383,46 @@ internal sealed class CameraOverlay(Func<IFrameStream?> findStream)
 
 	public UiElement Build()
 	{
+		var pill = new UiStack
+		{
+			Key = "status-pill",
+			Direction = UiValue.Of(UiComponentDirections.Horizontal),
+			Align = UiValue.Of(UiComponentAlignments.Center),
+			Gap = 0.012,
+			Children =
+			[
+				new UiTextRun
+				{
+					Key = "status-dot",
+					Text = "●",
+					Size = 0.04,
+					MinSize = 0.03,
+					Color = UiValue.From(() => _color.Value),
+					Align = UiValue.Of(UiComponentAlignments.Center),
+					MaxLines = 1
+				},
+				new UiTextRun
+				{
+					Key = "status-text",
+					Text = UiText.FromLocalized(() => _text.Value),
+					Size = 0.038,
+					MinSize = 0.028,
+					Color = UiValue.Of("#e8eef6"),
+					MaxLines = 1
+				}
+			]
+		};
+
+		if (backgroundOpacity > 0)
+		{
+			var alpha = (int)Math.Round(Math.Clamp(backgroundOpacity, 0, 100) / 100 * 255);
+			pill = pill with
+			{
+				Background = UiValue.Of($"#000000{alpha:X2}"),
+				Padding = UiSize.FromBasis(0.022)
+			};
+		}
+
 		return new UiStack
 		{
 			Key = "status-overlay",
@@ -363,40 +430,7 @@ internal sealed class CameraOverlay(Func<IFrameStream?> findStream)
 			Justify = UiValue.Of(UiComponentJustify.Start),
 			Align = UiValue.Of(UiComponentAlignments.Start),
 			Padding = 0.035,
-			Children =
-			[
-				new UiStack
-				{
-					Key = "status-pill",
-					Direction = UiValue.Of(UiComponentDirections.Horizontal),
-					Align = UiValue.Of(UiComponentAlignments.Center),
-					Gap = 0.012,
-					Padding = 0.022,
-					Background = UiValue.Of("#000000a8"),
-					Children =
-					[
-						new UiTextRun
-						{
-							Key = "status-dot",
-							Text = "●",
-							Size = 0.04,
-							MinSize = 0.03,
-							Color = UiValue.From(() => _color.Value),
-							Align = UiValue.Of(UiComponentAlignments.Center),
-							MaxLines = 1
-						},
-						new UiTextRun
-						{
-							Key = "status-text",
-							Text = UiText.FromLocalized(() => _text.Value),
-							Size = 0.038,
-							MinSize = 0.028,
-							Color = UiValue.Of("#e8eef6"),
-							MaxLines = 1
-						}
-					]
-				}
-			]
+			Children = [pill]
 		};
 	}
 

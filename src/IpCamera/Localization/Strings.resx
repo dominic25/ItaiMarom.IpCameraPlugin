@@ -64,6 +64,12 @@
   <data name="Widgets.Camera.Config.OverlayDescription" xml:space="preserve">
     <value>Show a live dot and the age of the last frame on the tile.</value>
   </data>
+  <data name="Widgets.Camera.Config.OverlayBackground" xml:space="preserve">
+    <value>Status background</value>
+  </data>
+  <data name="Widgets.Camera.Config.OverlayBackgroundDescription" xml:space="preserve">
+    <value>Opacity of the dark strip behind the live indicator. 0 hides it.</value>
+  </data>
   <data name="Widgets.Camera.Overlay.Live" xml:space="preserve">
     <value>LIVE</value>
   </data>

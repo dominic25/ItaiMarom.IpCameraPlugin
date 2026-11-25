@@ -57,8 +57,9 @@ items.
   instead of a frozen picture. Expose `LastFrameAt` on the stream, update the overlay once per second
   while the session is open, and make it optional in the widget settings. Implemented with a
   `LastFrameAt` timestamp on `IFrameStream`, an `overlay` widget key that is on for new widgets and off
-  for existing ones, and a one-second session tick that updates a small live or reconnecting pill. Tests
-  cover the tree, the states and the frame timestamp.
+  for existing ones, and a one-second session tick that updates a small live or reconnecting pill. A
+  background opacity slider (0 to 100) controls the dark strip behind it; 0 draws no strip. Tests cover
+  the tree, the states, the background and the frame timestamp.
 
 - [ ] **Save snapshot action**
   Add an action that writes the current frame as a JPEG. The folder is configurable, with a default

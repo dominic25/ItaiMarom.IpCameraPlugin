@@ -81,6 +81,28 @@ public sealed class CameraWidgetTests
 
 		Assert.That(view.Tree.Root.Type, Is.EqualTo("widget-configuration"));
 		Assert.That(ContainsId(view.Tree.Root, "overlay"), Is.True);
+		Assert.That(ContainsId(view.Tree.Root, "overlayBackground"), Is.True);
+	}
+
+	[Test]
+	public void The_status_background_is_optional()
+	{
+		var surface = Surface(new { camera = "camera-1", overlay = true, overlayBackground = 100 });
+
+		var view = CameraWidget.BuildView(surface, ProviderId, _ => null);
+		using var ui = new UiView(surface, view.Root);
+
+		var pill = FindById(ui.Tree.Root, "status-pill");
+		Assert.That(pill, Is.Not.Null);
+		Assert.That(pill!.Properties.ContainsKey("background"), Is.True);
+
+		var plain = Surface(new { camera = "camera-1", overlay = true, overlayBackground = 0 });
+		var plainView = CameraWidget.BuildView(plain, ProviderId, _ => null);
+		using var plainUi = new UiView(plain, plainView.Root);
+
+		var plainPill = FindById(plainUi.Tree.Root, "status-pill");
+		Assert.That(plainPill, Is.Not.Null);
+		Assert.That(plainPill!.Properties.ContainsKey("background"), Is.False);
 	}
 
 	[Test]
@@ -198,6 +220,24 @@ public sealed class CameraWidgetTests
 	{
 		return node.Id.EndsWith(id, StringComparison.Ordinal) ||
 			node.Children.Any(child => ContainsId(child, id));
+	}
+
+	private static UiNode? FindById(UiNode node, string id)
+	{
+		if (node.Id.EndsWith(id, StringComparison.Ordinal))
+		{
+			return node;
+		}
+
+		foreach (var child in node.Children)
+		{
+			if (FindById(child, id) is { } found)
+			{
+				return found;
+			}
+		}
+
+		return null;
 	}
 
 	private static UiSurface Surface(object data)	{
