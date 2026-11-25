@@ -217,6 +217,39 @@
   <data name="Setup.TransportUdp" xml:space="preserve">
     <value>UDP</value>
   </data>
+  <data name="Setup.Control" xml:space="preserve">
+    <value>Control</value>
+  </data>
+  <data name="Setup.ControlDescription" xml:space="preserve">
+    <value>How the control actions reach this camera. ONVIF works for most cameras; Xiaomi talks miIO to the camera itself.</value>
+  </data>
+  <data name="Setup.ControlOnvif" xml:space="preserve">
+    <value>ONVIF</value>
+  </data>
+  <data name="Setup.ControlXiaomi" xml:space="preserve">
+    <value>Xiaomi (miIO)</value>
+  </data>
+  <data name="Setup.ControlNone" xml:space="preserve">
+    <value>No controls</value>
+  </data>
+  <data name="Setup.ControlHost" xml:space="preserve">
+    <value>Control address</value>
+  </data>
+  <data name="Setup.ControlHostDescription" xml:space="preserve">
+    <value>The camera's own IP address when the stream goes through a relay such as go2rtc. Leave it empty to control the address of the stream. Required for Xiaomi.</value>
+  </data>
+  <data name="Setup.ControlToken" xml:space="preserve">
+    <value>Xiaomi token</value>
+  </data>
+  <data name="Setup.ControlTokenDescription" xml:space="preserve">
+    <value>The 32 character device token from Mi Home or your Xiaomi integration. It is stored as a secret.</value>
+  </data>
+  <data name="Setup.ControlHostRequired" xml:space="preserve">
+    <value>Enter the camera's IP address.</value>
+  </data>
+  <data name="Setup.ControlTokenInvalid" xml:space="preserve">
+    <value>The Xiaomi token must be 32 hexadecimal characters.</value>
+  </data>
   <data name="Setup.NameRequired" xml:space="preserve">
     <value>Enter a name for the camera.</value>
   </data>
@@ -384,6 +417,27 @@
   </data>
   <data name="Actions.Control.Failed" xml:space="preserve">
     <value>The camera did not accept the control.</value>
+  </data>
+  <data name="Actions.Control.Camera" xml:space="preserve">
+    <value>Camera</value>
+  </data>
+  <data name="Actions.Control.CameraDescription" xml:space="preserve">
+    <value>The camera to control. Leave it on the pressed widget to use the camera of the camera tile that ran the action.</value>
+  </data>
+  <data name="Actions.Control.PressedWidget" xml:space="preserve">
+    <value>Camera of the pressed widget</value>
+  </data>
+  <data name="Actions.Control.CameraMissing" xml:space="preserve">
+    <value>The selected camera no longer exists. Pick it again in the action.</value>
+  </data>
+  <data name="Actions.Control.Disabled" xml:space="preserve">
+    <value>Controls are turned off for this camera.</value>
+  </data>
+  <data name="Actions.Control.XiaomiNotConfigured" xml:space="preserve">
+    <value>Add the Xiaomi address and token to this camera in its settings.</value>
+  </data>
+  <data name="Actions.Control.XiaomiFailed" xml:space="preserve">
+    <value>The Xiaomi camera did not answer the control.</value>
   </data>
   <data name="FolderViews.CameraWall.Name" xml:space="preserve">
     <value>Camera wall</value>

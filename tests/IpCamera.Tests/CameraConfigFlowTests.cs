@@ -116,6 +116,63 @@ public sealed class CameraConfigFlowTests
 		Assert.That(result.FieldErrors, Does.ContainKey("url"));
 	}
 
+	[Test]
+	public async Task A_xiaomi_control_saves_the_address_and_a_secret_token()
+	{
+		var flow = CreateFlow();
+
+		var result = await flow.SubmitAsync("camera", Input(
+			("name", "mi360"),
+			("kind", "mjpeg"),
+			("url", "http://192.168.1.60:1984/api/stream.mjpeg?src=mi360_mjpeg"),
+			("control", "xiaomi"),
+			("controlHost", "192.168.1.30"),
+			("controlToken", "00112233445566778899aabbccddeeff")), new StubFlowContext(), CancellationToken.None);
+
+		Assert.That(result.Kind, Is.EqualTo(ConfigFlowResultKind.Complete));
+		Assert.Multiple(() =>
+		{
+			Assert.That(result.Values![CameraSettings.ControlKey].Value, Is.EqualTo("xiaomi"));
+			Assert.That(result.Values[CameraSettings.ControlHostKey].Value, Is.EqualTo("192.168.1.30"));
+			Assert.That(result.Values[CameraSettings.ControlTokenKey].Value, Is.EqualTo("00112233445566778899aabbccddeeff"));
+			Assert.That(result.Values[CameraSettings.ControlTokenKey].IsSecret, Is.True);
+		});
+	}
+
+	[Test]
+	public async Task A_xiaomi_control_needs_the_camera_address()
+	{
+		var flow = CreateFlow();
+
+		var result = await flow.SubmitAsync("camera", Input(
+			("name", "mi360"),
+			("kind", "mjpeg"),
+			("url", "http://192.168.1.60:1984/api/stream.mjpeg?src=mi360_mjpeg"),
+			("control", "xiaomi"),
+			("controlHost", " "),
+			("controlToken", "00112233445566778899aabbccddeeff")), new StubFlowContext(), CancellationToken.None);
+
+		Assert.That(result.Kind, Is.EqualTo(ConfigFlowResultKind.Error));
+		Assert.That(result.FieldErrors, Does.ContainKey(CameraSettings.ControlHostKey));
+	}
+
+	[Test]
+	public async Task A_xiaomi_token_that_is_not_hexadecimal_is_rejected()
+	{
+		var flow = CreateFlow();
+
+		var result = await flow.SubmitAsync("camera", Input(
+			("name", "mi360"),
+			("kind", "mjpeg"),
+			("url", "http://192.168.1.60:1984/api/stream.mjpeg?src=mi360_mjpeg"),
+			("control", "xiaomi"),
+			("controlHost", "192.168.1.30"),
+			("controlToken", "xyz")), new StubFlowContext(), CancellationToken.None);
+
+		Assert.That(result.Kind, Is.EqualTo(ConfigFlowResultKind.Error));
+		Assert.That(result.FieldErrors, Does.ContainKey(CameraSettings.ControlTokenKey));
+	}
+
 	private static CameraConfigFlow CreateFlow(
 		FfmpegLocator? ffmpeg = null,
 		CameraProbeResult? probeResult = null,

@@ -165,6 +165,34 @@ internal sealed class CameraConfigFlow(
 
 		var transport = ReadString(input, CameraSettings.RtspTransportKey) == "udp" ? "udp" : "tcp";
 
+		var control = ReadString(input, CameraSettings.ControlKey) switch
+		{
+			"xiaomi" => "xiaomi",
+			"none" => "none",
+			_ => "onvif"
+		};
+
+		var controlHost = ReadString(input, CameraSettings.ControlHostKey)?.Trim();
+		var controlToken = ReadString(input, CameraSettings.ControlTokenKey);
+		if (controlToken == "$masked")
+		{
+			controlToken = null;
+		}
+
+		if (control == "xiaomi")
+		{
+			if (string.IsNullOrWhiteSpace(controlHost))
+			{
+				return FieldError(CameraSettings.ControlHostKey, Strings.Setup.ControlHostRequired());
+			}
+
+			if (!string.IsNullOrEmpty(controlToken) &&
+				!IpCamera.Xiaomi.MiioClient.TryReadToken(controlToken, out _))
+			{
+				return FieldError(CameraSettings.ControlTokenKey, Strings.Setup.ControlTokenInvalid());
+			}
+		}
+
 		if (kind == CameraSourceKind.Rtsp && !ffmpeg.IsAvailable)
 		{
 			logger.Warning("An RTSP camera was configured but ffmpeg is not on the PATH.");
@@ -199,12 +227,19 @@ internal sealed class CameraConfigFlow(
 			[CameraSettings.UsernameKey] = ConfigFlowValue.Plain(username ?? string.Empty),
 			[CameraSettings.FpsKey] = ConfigFlowValue.Plain(fps.ToString(CultureInfo.InvariantCulture)),
 			[CameraSettings.MaxWidthKey] = ConfigFlowValue.Plain(maxWidth.ToString(CultureInfo.InvariantCulture)),
-			[CameraSettings.RtspTransportKey] = ConfigFlowValue.Plain(transport)
+			[CameraSettings.RtspTransportKey] = ConfigFlowValue.Plain(transport),
+			[CameraSettings.ControlKey] = ConfigFlowValue.Plain(control),
+			[CameraSettings.ControlHostKey] = ConfigFlowValue.Plain(controlHost ?? string.Empty)
 		};
 
 		if (!string.IsNullOrEmpty(password))
 		{
 			values[CameraSettings.PasswordKey] = ConfigFlowValue.Secret(password);
+		}
+
+		if (!string.IsNullOrEmpty(controlToken))
+		{
+			values[CameraSettings.ControlTokenKey] = ConfigFlowValue.Secret(controlToken);
 		}
 
 		return ConfigFlowResult.Complete(name, values);
@@ -327,7 +362,27 @@ internal sealed class CameraConfigFlow(
 					],
 					label: Strings.Setup.RtspTransport(),
 					defaultValue: "tcp")
-					.OnlyWhen(CameraSettings.KindKey, "rtsp")
+					.OnlyWhen(CameraSettings.KindKey, "rtsp"),
+				ActionParameter.Choice(
+					CameraSettings.ControlKey,
+					[
+						new ActionParameterOption { Value = "onvif", Label = Strings.Setup.ControlOnvif() },
+						new ActionParameterOption { Value = "xiaomi", Label = Strings.Setup.ControlXiaomi() },
+						new ActionParameterOption { Value = "none", Label = Strings.Setup.ControlNone() }
+					],
+					label: Strings.Setup.Control(),
+					description: Strings.Setup.ControlDescription(),
+					defaultValue: "onvif"),
+				ActionParameter.Text(
+					CameraSettings.ControlHostKey,
+					label: Strings.Setup.ControlHost(),
+					description: Strings.Setup.ControlHostDescription(),
+					placeholder: "192.168.1.30"),
+				ActionParameter.Secret(
+					CameraSettings.ControlTokenKey,
+					label: Strings.Setup.ControlToken(),
+					description: Strings.Setup.ControlTokenDescription())
+					.OnlyWhen(CameraSettings.ControlKey, "xiaomi")
 			]
 		};
 	}

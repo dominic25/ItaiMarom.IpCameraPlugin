@@ -75,6 +75,47 @@ public sealed class CameraDefinitionTests
 	}
 
 	[Test]
+	public void The_control_settings_are_read()
+	{
+		var camera = CameraDefinition.TryCreate(
+			_entryId,
+			"mi360",
+			Values(
+				(CameraSettings.KindKey, "mjpeg"),
+				(CameraSettings.UrlKey, "http://192.168.1.60:1984/api/stream.mjpeg?src=mi360_mjpeg"),
+				(CameraSettings.ControlKey, "xiaomi"),
+				(CameraSettings.ControlHostKey, "192.168.1.30")),
+			null,
+			out var error,
+			"00112233445566778899aabbccddeeff");
+
+		Assert.That(camera, Is.Not.Null, error);
+		Assert.Multiple(() =>
+		{
+			Assert.That(camera!.Control, Is.EqualTo(CameraControlKind.Xiaomi));
+			Assert.That(camera.ControlHost, Is.EqualTo("192.168.1.30"));
+			Assert.That(camera.ControlToken, Is.EqualTo("00112233445566778899aabbccddeeff"));
+		});
+	}
+
+	[Test]
+	public void A_camera_without_a_control_setting_uses_onvif()
+	{
+		var camera = CameraDefinition.TryCreate(
+			_entryId,
+			"Front door",
+			Values(
+				(CameraSettings.KindKey, "mjpeg"),
+				(CameraSettings.UrlKey, "http://192.168.1.20/camera.mjpeg")),
+			null,
+			out var error);
+
+		Assert.That(camera, Is.Not.Null, error);
+		Assert.That(camera!.Control, Is.EqualTo(CameraControlKind.Onvif));
+		Assert.That(camera.ControlHost, Is.Null);
+	}
+
+	[Test]
 	public void The_custom_quality_keeps_the_typed_values()
 	{
 		var camera = CameraDefinition.TryCreate(

@@ -9,6 +9,19 @@ internal enum CameraSourceKind
 	Rtsp
 }
 
+/// <summary>How a camera is controlled, separate from how its video is fetched.</summary>
+internal enum CameraControlKind
+{
+	/// <summary>Talk ONVIF to the device the stream points at.</summary>
+	Onvif,
+
+	/// <summary>Talk miIO to a Xiaomi camera, using the address and token from the entry.</summary>
+	Xiaomi,
+
+	/// <summary>The camera has no controls.</summary>
+	None
+}
+
 /// <summary>
 /// One camera as the integration sees it: everything the frame sources and the video stream provider need.
 /// The id is the config entry id, so a widget keeps pointing at the same camera when its settings change.
@@ -26,6 +39,15 @@ internal sealed record CameraDefinition(
 {
 	public bool NeedsFfmpeg => Kind == CameraSourceKind.Rtsp;
 
+	/// <summary>How control actions talk to this camera. Video settings never depend on it.</summary>
+	public CameraControlKind Control { get; init; } = CameraControlKind.Onvif;
+
+	/// <summary>The device address for control, when it differs from the stream address.</summary>
+	public string? ControlHost { get; init; }
+
+	/// <summary>The Xiaomi device token. Never log it, never write it to a widget.</summary>
+	public string? ControlToken { get; init; }
+
 	// Record ToString would otherwise put the RTSP password into a log or an exception.
 	public override string ToString() => $"{Name} ({Kind})";
 
@@ -38,7 +60,8 @@ internal sealed record CameraDefinition(
 		string title,
 		IReadOnlyDictionary<string, string?> values,
 		string? password,
-		out string? error)
+		out string? error,
+		string? controlToken = null)
 	{
 		error = null;
 
@@ -60,6 +83,13 @@ internal sealed record CameraDefinition(
 			return null;
 		}
 
+		var control = Read(values, CameraSettings.ControlKey) switch
+		{
+			"xiaomi" => CameraControlKind.Xiaomi,
+			"none" => CameraControlKind.None,
+			_ => CameraControlKind.Onvif
+		};
+
 		return new CameraDefinition(
 			entryId.ToString("D", CultureInfo.InvariantCulture),
 			title,
@@ -69,7 +99,12 @@ internal sealed record CameraDefinition(
 			NullIfEmpty(password),
 			ApplyQuality(Read(values, CameraSettings.QualityKey), ReadInt(values, CameraSettings.FpsKey, 5, 1, 15)),
 			ApplyQualityWidth(Read(values, CameraSettings.QualityKey), ReadInt(values, CameraSettings.MaxWidthKey, 640, 0, 3840)),
-			Read(values, CameraSettings.RtspTransportKey) == "udp" ? "udp" : "tcp");
+			Read(values, CameraSettings.RtspTransportKey) == "udp" ? "udp" : "tcp")
+		{
+			Control = control,
+			ControlHost = NullIfEmpty(Read(values, CameraSettings.ControlHostKey)),
+			ControlToken = NullIfEmpty(controlToken)
+		};
 	}
 
 	private static int ApplyQuality(string? quality, int custom)
@@ -159,4 +194,7 @@ internal static class CameraSettings
 	public const string MaxWidthKey = "maxWidth";
 	public const string RtspTransportKey = "rtspTransport";
 	public const string QualityKey = "quality";
+	public const string ControlKey = "control";
+	public const string ControlHostKey = "controlHost";
+	public const string ControlTokenKey = "controlToken";
 }

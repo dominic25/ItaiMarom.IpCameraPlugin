@@ -1,6 +1,7 @@
 using IpCamera.Cameras;
 using IpCamera.Onvif;
 using IpCamera.Streaming;
+using IpCamera.Xiaomi;
 using MacroDeck.Plugin.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
@@ -29,6 +30,8 @@ internal static class Composition
 		builder.Services.AddSingleton<IOnvifClient>(services => new OnvifClient(
 			services.GetRequiredService<IHttpClientFactory>(),
 			services.GetRequiredService<ILogger>()));
+		builder.Services.AddSingleton<IMiioClient>(services => new MiioClient(
+			services.GetRequiredService<ILogger>()));
 		builder.Services.AddSingleton(services => new CameraRegistry(
 			camera => new CameraStream(
 				camera,
@@ -45,6 +48,7 @@ internal static class Composition
 			services.GetRequiredService<ICameraProbe>(),
 			services.GetRequiredService<IOnvifDiscovery>(),
 			services.GetRequiredService<IOnvifClient>(),
+			services.GetRequiredService<IMiioClient>(),
 			services.GetRequiredService<ILogger>()));
 	}
 }

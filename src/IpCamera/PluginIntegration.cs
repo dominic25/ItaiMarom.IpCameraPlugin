@@ -6,6 +6,7 @@ using IpCamera.Onvif;
 using IpCamera.Streaming;
 using IpCamera.VideoStreams;
 using IpCamera.Widgets;
+using IpCamera.Xiaomi;
 using MacroDeck.Localization;
 using MacroDeck.Sdk;
 using MacroDeck.Sdk.Actions;
@@ -44,6 +45,7 @@ internal sealed class PluginIntegration : IPluginIntegration,
 	private readonly ICameraProbe _probe;
 	private readonly IOnvifDiscovery _onvifDiscovery;
 	private readonly IOnvifClient _onvifClient;
+	private readonly IMiioClient _miioClient;
 
 	private CameraStreamProvider? _provider;
 	private string? _providerQualifiedId;
@@ -61,6 +63,7 @@ internal sealed class PluginIntegration : IPluginIntegration,
 		ICameraProbe probe,
 		IOnvifDiscovery onvifDiscovery,
 		IOnvifClient onvifClient,
+		IMiioClient miioClient,
 		ILogger logger)
 	{
 		_registry = registry;
@@ -69,12 +72,13 @@ internal sealed class PluginIntegration : IPluginIntegration,
 		_probe = probe;
 		_onvifDiscovery = onvifDiscovery;
 		_onvifClient = onvifClient;
+		_miioClient = miioClient;
 		_logger = logger.ForContext<PluginIntegration>();
 		Actions =
 		[
 			new ShowCameraAction(() => _context?.Widgets, _logger),
 			new SaveSnapshotAction(() => _context?.Widgets, _registry, _logger),
-			.. CameraControlAction.Create(() => _context?.Widgets, _registry, _onvifClient, _logger)
+			.. CameraControlAction.Create(() => _context?.Widgets, _registry, _onvifClient, _miioClient, _logger)
 		];
 	}
 
@@ -440,12 +444,21 @@ internal sealed class PluginIntegration : IPluginIntegration,
 				[CameraSettings.UsernameKey] = await ReadStringAsync(context.Config, entry.Id, CameraSettings.UsernameKey).ConfigureAwait(false),
 				[CameraSettings.FpsKey] = await ReadStringAsync(context.Config, entry.Id, CameraSettings.FpsKey).ConfigureAwait(false),
 				[CameraSettings.MaxWidthKey] = await ReadStringAsync(context.Config, entry.Id, CameraSettings.MaxWidthKey).ConfigureAwait(false),
-				[CameraSettings.RtspTransportKey] = await ReadStringAsync(context.Config, entry.Id, CameraSettings.RtspTransportKey).ConfigureAwait(false)
+				[CameraSettings.RtspTransportKey] = await ReadStringAsync(context.Config, entry.Id, CameraSettings.RtspTransportKey).ConfigureAwait(false),
+				[CameraSettings.ControlKey] = await ReadStringAsync(context.Config, entry.Id, CameraSettings.ControlKey).ConfigureAwait(false),
+				[CameraSettings.ControlHostKey] = await ReadStringAsync(context.Config, entry.Id, CameraSettings.ControlHostKey).ConfigureAwait(false)
 			};
 
 			var password = await ReadSecretAsync(context.Config, entry.Id, CameraSettings.PasswordKey).ConfigureAwait(false);
+			var controlToken = await ReadSecretAsync(context.Config, entry.Id, CameraSettings.ControlTokenKey).ConfigureAwait(false);
 
-			var camera = CameraDefinition.TryCreate(entry.Id, entry.Title, values, password, out var error);
+			var camera = CameraDefinition.TryCreate(
+				entry.Id,
+				entry.Title,
+				values,
+				password,
+				out var error,
+				controlToken);
 			if (camera is null)
 			{
 				_logger.Warning("Skipped camera entry '{Title}': {Reason}.", entry.Title, error);
