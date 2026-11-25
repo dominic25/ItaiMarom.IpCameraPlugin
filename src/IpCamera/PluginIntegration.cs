@@ -76,7 +76,13 @@ internal sealed class PluginIntegration : IPluginIntegration,
 		new() { Kind = UiSurfaceKinds.Widget, SessionMode = UiSessionModes.Shared },
 		new() { Kind = UiSurfaceKinds.Preview, SessionMode = UiSessionModes.Shared },
 		new() { Kind = UiSurfaceKinds.Config, SessionMode = UiSessionModes.Exclusive },
-		new() { Kind = UiSurfaceKinds.Dialog, SessionMode = UiSessionModes.Exclusive }
+		new() { Kind = UiSurfaceKinds.Dialog, SessionMode = UiSessionModes.Exclusive },
+		new() { Kind = UiSurfaceKinds.Page, SessionMode = UiSessionModes.Exclusive }
+	];
+
+	public IReadOnlyList<UiPageDeclaration> Pages { get; } =
+	[
+		new() { Id = "cameras", Title = Strings.Health.Title() }
 	];
 
 	IConfigFlow IConfigFlowProvider.CreateConfigFlow()
@@ -145,6 +151,18 @@ internal sealed class PluginIntegration : IPluginIntegration,
 		cancellationToken.ThrowIfCancellationRequested();
 
 		var surface = request.Surface;
+
+		if (surface.Kind == UiSurfaceKinds.Page &&
+			surface.Attributes.TryGetValue(UiPageSurfaceAttributes.PageId, out var pageId) &&
+			pageId.GetString() == "cameras")
+		{
+			var health = new CameraHealthView(_registry);
+			health.Update();
+
+			return new ViewSession(
+				new UiView(surface, health.Build()),
+				health.Update);
+		}
 
 		if (surface.Kind == UiSurfaceKinds.Dialog &&
 			surface.Attributes.TryGetValue(UiDialogSurfaceAttributes.ViewId, out var viewId) &&

@@ -41,6 +41,8 @@ camera picture is a local test stream.
   snapshot address.
 - **Offline feedback**: a camera that drops out shows "The camera is offline. Reconnecting." on its
   widget, and the integration page offers a Retry action.
+- **A camera health page**: a Cameras tab on the integration page lists every camera's state, source,
+  resolution and last-frame age, with a Retry button that restarts that camera.
 - **A status overlay** (optional, off for existing widgets): a small live dot and the age of the last
   frame on the tile, or "RECONNECTING" when the source drops. New widgets enable it by default. It can
   be turned off in the widget settings, and a background opacity slider controls the dark strip behind

@@ -47,11 +47,12 @@ items.
   overlay remains on the single-camera layout. Revisit the per-cell modal when the action context
   carries the pressed node.
 
-- [ ] **Camera health page**
+- [x] **Camera health page**
   Add an integration page that lists every camera with its state, source type, resolution, last frame
   age, last error and a Test or Retry button. Use the `page` surface, a timer to refresh the table, and
   the registry's cached state. This gives one place to see why a camera is not playing without opening
-  its widget.
+  its widget. Implemented as a Cameras page with a one-second refresh and a Retry button per camera; the
+  raw error is not shown because ffmpeg messages can contain the camera URL.
 
 - [x] **Status overlay**
   Draw a small live indicator and the last frame age on the camera tile, and a clear reconnecting state

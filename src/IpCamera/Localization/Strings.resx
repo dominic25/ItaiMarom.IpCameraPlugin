@@ -115,6 +115,30 @@
   <data name="Widgets.Camera.Overlay.Connecting" xml:space="preserve">
     <value>CONNECTING</value>
   </data>
+  <data name="Health.Title" xml:space="preserve">
+    <value>Cameras</value>
+  </data>
+  <data name="Health.Description" xml:space="preserve">
+    <value>State of every configured camera. Retry starts its source again.</value>
+  </data>
+  <data name="Health.Empty" xml:space="preserve">
+    <value>No cameras configured.</value>
+  </data>
+  <data name="Health.Retry" xml:space="preserve">
+    <value>Retry</value>
+  </data>
+  <data name="Health.Live" xml:space="preserve">
+    <value>Live</value>
+  </data>
+  <data name="Health.Offline" xml:space="preserve">
+    <value>Offline</value>
+  </data>
+  <data name="Health.Connecting" xml:space="preserve">
+    <value>Connecting</value>
+  </data>
+  <data name="Health.NoFrame" xml:space="preserve">
+    <value>No frame yet</value>
+  </data>
   <data name="Setup.Title" xml:space="preserve">
     <value>Add camera</value>
   </data>
