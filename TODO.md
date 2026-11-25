@@ -76,7 +76,7 @@ items.
   back to Custom when either is edited. Implemented as a `quality` key in the camera entry; the preset
   overrides the stored frame rate and width at read time, and Custom keeps them.
 
-- [ ] **Camera wall folder view**
+- [x] **Camera wall folder view**
   Register an `IFolderViewProvider` that replaces a folder's widget grid with the plugin's own drawing,
   so the folder can go edge to edge with no cell gaps, tile faces or per-widget chrome. Offer two views:
   a camera wall with a chosen set of cameras in a configurable grid, and a single camera filling the
@@ -88,6 +88,8 @@ items.
   appearance handling, run one session per cell, and test the view tree, the configuration round trip
   and the conformance run. DoriDeck's piano-keyboard view is the only public reference implementation
   today: https://github.com/Sarti2004/DoriDeck/blob/main/src/PianoFolder/PluginIntegration.cs
+  Implemented as one `camera-wall` view with up to four cameras, one or two columns and Fill or Fit; a
+  single camera fills the folder. The same view covers both cases.
 
 ## Later
 

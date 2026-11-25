@@ -10,6 +10,7 @@ using MacroDeck.Localization;
 using MacroDeck.Sdk;
 using MacroDeck.Sdk.Actions;
 using MacroDeck.Sdk.ConfigFlow;
+using MacroDeck.Sdk.FolderViews;
 using MacroDeck.Sdk.Issues;
 using MacroDeck.Sdk.Ui;
 using MacroDeck.Sdk.VideoStreams;
@@ -30,6 +31,7 @@ internal sealed class PluginIntegration : IPluginIntegration,
 	IVideoStreamIntegration,
 	IWidgetTypeProvider,
 	IUiProvider,
+	IFolderViewProvider,
 	IIntegrationIssueProvider
 {
 	private const string FfmpegIssueId = "ffmpeg-missing";
@@ -46,6 +48,8 @@ internal sealed class PluginIntegration : IPluginIntegration,
 	private CameraStreamProvider? _provider;
 	private string? _providerQualifiedId;
 	private TaskCompletionSource<string?> _providerReady = new(TaskCreationOptions.RunContinuationsAsynchronously);
+	private IFolderViewProviderContext? _folderViewContext;
+	private string? _folderViewQualifiedId;
 	private IIntegrationContext? _context;
 	private string? _widgetTypeId;
 	private IReadOnlyList<WidgetTypeDescriptor> _widgetTypes = [];
@@ -81,13 +85,38 @@ internal sealed class PluginIntegration : IPluginIntegration,
 		new() { Kind = UiSurfaceKinds.Preview, SessionMode = UiSessionModes.Shared },
 		new() { Kind = UiSurfaceKinds.Config, SessionMode = UiSessionModes.Exclusive },
 		new() { Kind = UiSurfaceKinds.Dialog, SessionMode = UiSessionModes.Exclusive },
-		new() { Kind = UiSurfaceKinds.Page, SessionMode = UiSessionModes.Exclusive }
+		new() { Kind = UiSurfaceKinds.Page, SessionMode = UiSessionModes.Exclusive },
+		new() { Kind = UiSurfaceKinds.Folder, SessionMode = UiSessionModes.Shared }
 	];
 
 	public IReadOnlyList<UiPageDeclaration> Pages { get; } =
 	[
 		new() { Id = "cameras", Title = Strings.Health.Title() }
 	];
+
+	private static readonly FolderViewDescriptor _cameraWall = new(
+		CameraWallView.ViewId,
+		Strings.FolderViews.CameraWall.Name(),
+		Strings.FolderViews.CameraWall.Description(),
+		HasConfiguration: true);
+
+	public IReadOnlyList<FolderViewDescriptor> GetFolderViews()
+	{
+		return [_cameraWall];
+	}
+
+	public async Task InitializeAsync(
+		IFolderViewProviderContext context,
+		CancellationToken cancellationToken = default)
+	{
+		_folderViewContext = context;
+
+		var registration = await HostCalls.RunAsync(
+			() => context.RegisterFolderViewAsync(_cameraWall, cancellationToken),
+			cancellationToken).ConfigureAwait(false);
+
+		_folderViewQualifiedId = registration.FolderViewId;
+	}
 
 	IConfigFlow IConfigFlowProvider.CreateConfigFlow()
 	{
@@ -166,6 +195,30 @@ internal sealed class PluginIntegration : IPluginIntegration,
 			return new ViewSession(
 				new UiView(surface, health.Build()),
 				health.Update);
+		}
+
+		if (surface.Kind == UiSurfaceKinds.Folder &&
+			surface.Attributes.TryGetValue(UiFolderSurfaceAttributes.ViewId, out var folderViewId) &&
+			IsCameraWall(folderViewId.GetString()))
+		{
+			var configuration = surface.Attributes.TryGetValue(
+				UiFolderSurfaceAttributes.Configuration,
+				out var stored) ? stored : default;
+
+			return Create(surface, CameraWallView.Build(configuration, _providerQualifiedId));
+		}
+
+		if (surface.Kind == UiSurfaceKinds.Config &&
+			surface.Attributes.TryGetValue(UiConfigSurfaceAttributes.EntryPoint, out var entryPoint) &&
+			entryPoint.GetString() == UiConfigEntryPoints.FolderViewConfig &&
+			surface.Attributes.TryGetValue(UiConfigSurfaceAttributes.FolderViewId, out var configuredView) &&
+			IsCameraWall(configuredView.GetString()))
+		{
+			var configuration = surface.Attributes.TryGetValue(
+				UiConfigSurfaceAttributes.FolderViewConfiguration,
+				out var stored) ? stored : default;
+
+			return Create(surface, CameraWallView.BuildConfiguration(configuration));
 		}
 
 		if (surface.Kind == UiSurfaceKinds.Dialog &&
@@ -248,6 +301,12 @@ internal sealed class PluginIntegration : IPluginIntegration,
 			widgetType.EndsWith("::" + CameraWidget.TypeId, StringComparison.Ordinal);
 	}
 
+	private bool IsCameraWall(string? viewId)
+	{
+		return viewId == CameraWallView.ViewId ||
+			(viewId is not null && viewId == _folderViewQualifiedId);
+	}
+
 	public Task<IReadOnlyList<IntegrationIssue>> GetIssuesAsync(CancellationToken cancellationToken = default)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
@@ -291,6 +350,23 @@ internal sealed class PluginIntegration : IPluginIntegration,
 	public async Task ShutdownAsync()
 	{
 		_providerReady.TrySetResult(null);
+
+		if (_folderViewContext is not null)
+		{
+			try
+			{
+				await _folderViewContext
+					.UnregisterFolderViewAsync(CameraWallView.ViewId, CancellationToken.None)
+					.ConfigureAwait(false);
+			}
+			catch (Exception exception) when (exception is not OperationCanceledException)
+			{
+				_logger.Debug("Could not withdraw the camera wall: {Reason}", exception.Message);
+			}
+
+			_folderViewContext = null;
+			_folderViewQualifiedId = null;
+		}
 
 		if (_provider is not null)
 		{

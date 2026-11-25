@@ -325,6 +325,42 @@
   <data name="Actions.SaveSnapshot.SaveFailed" xml:space="preserve">
     <value>The snapshot could not be saved.</value>
   </data>
+  <data name="FolderViews.CameraWall.Name" xml:space="preserve">
+    <value>Camera wall</value>
+  </data>
+  <data name="FolderViews.CameraWall.Description" xml:space="preserve">
+    <value>Shows the chosen cameras across the whole folder.</value>
+  </data>
+  <data name="FolderViews.Config.Title" xml:space="preserve">
+    <value>Camera wall</value>
+  </data>
+  <data name="FolderViews.Config.Description" xml:space="preserve">
+    <value>Choose up to four cameras and one or two columns. A single camera fills the folder.</value>
+  </data>
+  <data name="FolderViews.Config.Camera1" xml:space="preserve">
+    <value>Camera 1</value>
+  </data>
+  <data name="FolderViews.Config.Camera2" xml:space="preserve">
+    <value>Camera 2</value>
+  </data>
+  <data name="FolderViews.Config.Camera3" xml:space="preserve">
+    <value>Camera 3</value>
+  </data>
+  <data name="FolderViews.Config.Camera4" xml:space="preserve">
+    <value>Camera 4</value>
+  </data>
+  <data name="FolderViews.Config.Columns" xml:space="preserve">
+    <value>Columns</value>
+  </data>
+  <data name="FolderViews.Config.ColumnOne" xml:space="preserve">
+    <value>One</value>
+  </data>
+  <data name="FolderViews.Config.ColumnTwo" xml:space="preserve">
+    <value>Two</value>
+  </data>
+  <data name="FolderViews.Config.Empty" xml:space="preserve">
+    <value>Choose cameras in the folder settings</value>
+  </data>
   <data name="Issues.FfmpegMissing.Title" xml:space="preserve">
     <value>ffmpeg is not installed</value>
   </data>

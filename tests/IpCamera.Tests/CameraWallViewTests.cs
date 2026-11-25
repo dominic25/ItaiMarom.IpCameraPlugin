@@ -1,0 +1,113 @@
+using System.Text.Json;
+using IpCamera.Widgets;
+using MacroDeck.Ui.Model.Nodes;
+using MacroDeck.Ui.Model.Surfaces;
+using MacroDeck.Ui.Runtime;
+using NUnit.Framework;
+
+namespace IpCamera.Tests;
+
+[TestFixture]
+public sealed class CameraWallViewTests
+{
+	private const string ProviderId = "test-plugin::cameras";
+
+	[Test]
+	public void A_single_camera_fills_the_folder()
+	{
+		var config = JsonSerializer.SerializeToElement(new { camera1 = "camera-1", columns = "1" });
+
+		using var view = new UiView(Surface(), CameraWallView.Build(config, ProviderId));
+
+		Assert.That(CountType(view.Tree.Root, "macrodeck.video-stream"), Is.EqualTo(1));
+	}
+
+	[Test]
+	public void Two_columns_draw_two_streams()
+	{
+		var config = JsonSerializer.SerializeToElement(new
+		{
+			camera1 = "camera-1",
+			camera2 = "camera-2",
+			columns = "2"
+		});
+
+		using var view = new UiView(Surface(), CameraWallView.Build(config, ProviderId));
+
+		Assert.That(CountType(view.Tree.Root, "macrodeck.video-stream"), Is.EqualTo(2));
+	}
+
+	[Test]
+	public void Four_cameras_draw_four_streams()
+	{
+		var config = JsonSerializer.SerializeToElement(new
+		{
+			camera1 = "camera-1",
+			camera2 = "camera-2",
+			camera3 = "camera-3",
+			camera4 = "camera-4",
+			columns = "2"
+		});
+
+		using var view = new UiView(Surface(), CameraWallView.Build(config, ProviderId));
+
+		Assert.That(CountType(view.Tree.Root, "macrodeck.video-stream"), Is.EqualTo(4));
+	}
+
+	[Test]
+	public void An_empty_wall_draws_the_hint()
+	{
+		var config = JsonSerializer.SerializeToElement(new { columns = "1" });
+
+		using var view = new UiView(Surface(), CameraWallView.Build(config, ProviderId));
+
+		Assert.That(CountType(view.Tree.Root, "macrodeck.video-stream"), Is.Zero);
+		Assert.That(ContainsId(view.Tree.Root, "wall-placeholder"), Is.True);
+	}
+
+	[Test]
+	public void The_folder_configuration_offers_cameras_columns_and_fit()
+	{
+		var config = JsonSerializer.SerializeToElement(new { camera1 = "camera-1", columns = "2" });
+
+		using var view = new UiView(ConfigSurface(), CameraWallView.BuildConfiguration(config));
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(ContainsId(view.Tree.Root, "camera1"), Is.True);
+			Assert.That(ContainsId(view.Tree.Root, "camera4"), Is.True);
+			Assert.That(ContainsId(view.Tree.Root, "columns"), Is.True);
+			Assert.That(ContainsId(view.Tree.Root, "fit"), Is.True);
+		});
+	}
+
+	private static UiSurface Surface()
+	{
+		return new UiSurface
+		{
+			Kind = UiSurfaceKinds.Folder,
+			SessionMode = UiSessionModes.Shared
+		};
+	}
+
+	private static UiSurface ConfigSurface()
+	{
+		return new UiSurface
+		{
+			Kind = UiSurfaceKinds.Config,
+			SessionMode = UiSessionModes.Exclusive
+		};
+	}
+
+	private static int CountType(UiNode node, string type)
+	{
+		return (node.Type == type ? 1 : 0) +
+			node.Children.Sum(child => CountType(child, type));
+	}
+
+	private static bool ContainsId(UiNode node, string id)
+	{
+		return node.Id.EndsWith(id, StringComparison.Ordinal) ||
+			node.Children.Any(child => ContainsId(child, id));
+	}
+}

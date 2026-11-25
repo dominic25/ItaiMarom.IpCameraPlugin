@@ -46,6 +46,8 @@ camera picture is a local test stream.
   resolution and last-frame age, with a Retry button that restarts that camera.
 - **A Save snapshot action**: writes the pressed camera's current picture as a JPEG. The folder is set
   per action; empty means `Pictures\IP Camera`.
+- **A camera wall folder view**: replace a folder's widget grid with one camera or up to four in a
+  configurable wall. Pick it in the folder's settings; Macro Deck keeps its own back button.
 - **A status overlay** (optional, off for existing widgets): a small live dot and the age of the last
   frame on the tile, or "RECONNECTING" when the source drops. New widgets enable it by default. It can
   be turned off in the widget settings, and a background opacity slider controls the dark strip behind
