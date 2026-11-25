@@ -38,7 +38,8 @@ camera picture is a local test stream.
 - **A camera setup flow**: one Macro Deck configuration entry per camera. The flow fetches one frame
   before saving, so a wrong URL, rejected credentials or a go2rtc stream that only offers H.265 is
   reported immediately. It also discovers ONVIF cameras on the LAN and resolves their RTSP or
-  snapshot address.
+  snapshot address. Stream quality can be a Low, Balanced or High preset, or Custom with your own frame
+  rate and maximum width.
 - **Offline feedback**: a camera that drops out shows "The camera is offline. Reconnecting." on its
   widget, and the integration page offers a Retry action.
 - **A camera health page**: a Cameras tab on the integration page lists every camera's state, source,

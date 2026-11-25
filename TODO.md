@@ -70,10 +70,11 @@ items.
   no frame. Prime the stream first if nobody is watching it. Implemented with the action's own folder
   parameter and `Pictures\IP Camera` when empty; the per-camera override is not added yet.
 
-- [ ] **Stream quality presets**
+- [x] **Stream quality presets**
   Offer Low, Balanced and High presets per camera, mapping to a frame rate and maximum width, while
   keeping the current custom values. Show the resulting frame rate and width beside the preset and fall
-  back to Custom when either is edited.
+  back to Custom when either is edited. Implemented as a `quality` key in the camera entry; the preset
+  overrides the stored frame rate and width at read time, and Custom keeps them.
 
 - [ ] **Camera wall folder view**
   Register an `IFolderViewProvider` that replaces a folder's widget grid with the plugin's own drawing,

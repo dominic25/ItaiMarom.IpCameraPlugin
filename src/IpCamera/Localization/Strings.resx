@@ -166,6 +166,24 @@
   <data name="Setup.UrlDescription" xml:space="preserve">
     <value>The camera's snapshot, MJPEG or RTSP address. The Mi 360 1080p exposes RTSP after a community firmware hack, and go2rtc can serve it as MJPEG instead.</value>
   </data>
+  <data name="Setup.Quality" xml:space="preserve">
+    <value>Stream quality</value>
+  </data>
+  <data name="Setup.QualityDescription" xml:space="preserve">
+    <value>A preset sets the frame rate and maximum width. Choose Custom to use the values below.</value>
+  </data>
+  <data name="Setup.QualityCustom" xml:space="preserve">
+    <value>Custom</value>
+  </data>
+  <data name="Setup.QualityLow" xml:space="preserve">
+    <value>Low</value>
+  </data>
+  <data name="Setup.QualityBalanced" xml:space="preserve">
+    <value>Balanced</value>
+  </data>
+  <data name="Setup.QualityHigh" xml:space="preserve">
+    <value>High</value>
+  </data>
   <data name="Setup.Username" xml:space="preserve">
     <value>Username</value>
   </data>

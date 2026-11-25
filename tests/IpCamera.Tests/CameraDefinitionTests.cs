@@ -52,6 +52,48 @@ public sealed class CameraDefinitionTests
 		Assert.That(camera.NeedsFfmpeg, Is.True);
 	}
 
+	[TestCase("low", 2, 640)]
+	[TestCase("balanced", 5, 1280)]
+	[TestCase("high", 10, 1920)]
+	public void A_quality_preset_overrides_the_custom_values(string quality, int fps, int maxWidth)
+	{
+		var camera = CameraDefinition.TryCreate(
+			_entryId,
+			"Front door",
+			Values(
+				(CameraSettings.KindKey, "mjpeg"),
+				(CameraSettings.UrlKey, "http://192.168.1.20/camera.mjpeg"),
+				(CameraSettings.QualityKey, quality),
+				(CameraSettings.FpsKey, "12"),
+				(CameraSettings.MaxWidthKey, "3840")),
+			null,
+			out var error);
+
+		Assert.That(camera, Is.Not.Null, error);
+		Assert.That(camera!.FramesPerSecond, Is.EqualTo(fps));
+		Assert.That(camera.MaxWidth, Is.EqualTo(maxWidth));
+	}
+
+	[Test]
+	public void The_custom_quality_keeps_the_typed_values()
+	{
+		var camera = CameraDefinition.TryCreate(
+			_entryId,
+			"Front door",
+			Values(
+				(CameraSettings.KindKey, "mjpeg"),
+				(CameraSettings.UrlKey, "http://192.168.1.20/camera.mjpeg"),
+				(CameraSettings.QualityKey, "custom"),
+				(CameraSettings.FpsKey, "12"),
+				(CameraSettings.MaxWidthKey, "800")),
+			null,
+			out var error);
+
+		Assert.That(camera, Is.Not.Null, error);
+		Assert.That(camera!.FramesPerSecond, Is.EqualTo(12));
+		Assert.That(camera.MaxWidth, Is.EqualTo(800));
+	}
+
 	[Test]
 	public void An_entry_without_a_url_is_rejected()
 	{

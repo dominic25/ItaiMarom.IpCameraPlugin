@@ -67,9 +67,31 @@ internal sealed record CameraDefinition(
 			url,
 			NullIfEmpty(Read(values, CameraSettings.UsernameKey)),
 			NullIfEmpty(password),
-			ReadInt(values, CameraSettings.FpsKey, 5, 1, 15),
-			ReadInt(values, CameraSettings.MaxWidthKey, 640, 0, 3840),
+			ApplyQuality(Read(values, CameraSettings.QualityKey), ReadInt(values, CameraSettings.FpsKey, 5, 1, 15)),
+			ApplyQualityWidth(Read(values, CameraSettings.QualityKey), ReadInt(values, CameraSettings.MaxWidthKey, 640, 0, 3840)),
 			Read(values, CameraSettings.RtspTransportKey) == "udp" ? "udp" : "tcp");
+	}
+
+	private static int ApplyQuality(string? quality, int custom)
+	{
+		return quality switch
+		{
+			"low" => 2,
+			"balanced" => 5,
+			"high" => 10,
+			_ => custom
+		};
+	}
+
+	private static int ApplyQualityWidth(string? quality, int custom)
+	{
+		return quality switch
+		{
+			"low" => 640,
+			"balanced" => 1280,
+			"high" => 1920,
+			_ => custom
+		};
 	}
 
 	public static bool TryReadKind(string? value, out CameraSourceKind kind)
@@ -136,4 +158,5 @@ internal static class CameraSettings
 	public const string FpsKey = "fps";
 	public const string MaxWidthKey = "maxWidth";
 	public const string RtspTransportKey = "rtspTransport";
+	public const string QualityKey = "quality";
 }

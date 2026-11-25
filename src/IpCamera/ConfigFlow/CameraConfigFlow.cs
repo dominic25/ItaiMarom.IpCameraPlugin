@@ -275,6 +275,18 @@ internal sealed class CameraConfigFlow(
 			description: Strings.Setup.UrlDescription(),
 			placeholder: "http://192.168.1.20/snapshot.jpg"));
 
+		fields.Add(ActionParameter.Choice(
+			CameraSettings.QualityKey,
+			[
+				new ActionParameterOption { Value = "custom", Label = Strings.Setup.QualityCustom() },
+				new ActionParameterOption { Value = "low", Label = Strings.Setup.QualityLow() },
+				new ActionParameterOption { Value = "balanced", Label = Strings.Setup.QualityBalanced() },
+				new ActionParameterOption { Value = "high", Label = Strings.Setup.QualityHigh() }
+			],
+			label: Strings.Setup.Quality(),
+			description: Strings.Setup.QualityDescription(),
+			defaultValue: "custom"));
+
 		return new ConfigFlowStep
 		{
 			StepId = StepId,
