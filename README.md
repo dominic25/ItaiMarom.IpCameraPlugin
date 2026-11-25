@@ -173,7 +173,8 @@ not answer on one. The model therefore needs one of two local routes:
    RTSP, add an **RTSP** camera with the URL its firmware documents, commonly
    `rtsp://<camera-ip>/live/ch00_0`.
 
-No cloud login, account token, or Xiaomi API is used by this plugin itself.
+No cloud login or account token is used by this plugin. Camera control uses the camera's local miIO
+channel and its device token, which is stored as a secret and never leaves the computer.
 
 ## How the frames flow
 
