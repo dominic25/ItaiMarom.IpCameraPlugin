@@ -187,8 +187,29 @@ public sealed class CameraWidgetTests
 		var view = CameraWidget.BuildView(surface, ProviderId, _ => null);
 		using var ui = new UiView(surface, view.Root);
 
-		Assert.That(view.Overlay, Is.Not.Null);
+		Assert.That(view.Overlays, Is.Not.Empty);
 		Assert.That(ContainsId(ui.Tree.Root, "status-text"), Is.True);
+	}
+
+	[Test]
+	public void Every_configured_grid_cell_gets_its_own_overlay()
+	{
+		var surface = Surface(new
+		{
+			camera = "camera-1",
+			camera2 = "camera-2",
+			camera3 = "camera-3",
+			camera4 = "camera-4",
+			layout = CameraWidget.LayoutGrid,
+			overlay = true
+		});
+
+		var view = CameraWidget.BuildView(surface, ProviderId, _ => null);
+		using var ui = new UiView(surface, view.Root);
+
+		Assert.That(view.Overlays, Has.Count.EqualTo(4));
+		Assert.That(ContainsId(ui.Tree.Root, "cell-0-status-text"), Is.True);
+		Assert.That(ContainsId(ui.Tree.Root, "cell-3-status-text"), Is.True);
 	}
 
 	[Test]
@@ -199,7 +220,7 @@ public sealed class CameraWidgetTests
 		var view = CameraWidget.BuildView(surface, ProviderId, _ => null);
 		using var ui = new UiView(surface, view.Root);
 
-		Assert.That(view.Overlay, Is.Null);
+		Assert.That(view.Overlays, Is.Empty);
 		Assert.That(ContainsId(ui.Tree.Root, "status-text"), Is.False);
 	}
 

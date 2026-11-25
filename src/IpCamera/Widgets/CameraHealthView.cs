@@ -22,7 +22,7 @@ internal sealed class CameraHealthView
 	{
 		_registry = registry;
 		_rows = registry.Cameras
-			.Select(camera => new Row(camera, registry))
+			.Select((camera, index) => new Row(camera, registry, index))
 			.ToList();
 	}
 
@@ -88,7 +88,7 @@ internal sealed class CameraHealthView
 		}
 	}
 
-	private sealed class Row(CameraDefinition camera, CameraRegistry registry)
+	private sealed class Row(CameraDefinition camera, CameraRegistry registry, int index)
 	{
 		private readonly UiState<LocalizedString> _state = new(Strings.Health.Connecting());
 		private readonly UiState<string> _stateColor = new(PendingColor);
@@ -131,7 +131,7 @@ internal sealed class CameraHealthView
 		{
 			return new UiStack
 			{
-				Key = $"health-row-{camera.Id}",
+				Key = $"health-row-{index}",
 				Direction = UiValue.Of(UiComponentDirections.Horizontal),
 				Fill = true,
 				Align = UiValue.Of(UiComponentAlignments.Center),
@@ -142,7 +142,7 @@ internal sealed class CameraHealthView
 				[
 					new UiStack
 					{
-						Key = $"health-name-{camera.Id}",
+						Key = $"health-name-{index}",
 						Fill = true,
 						Direction = UiValue.Of(UiComponentDirections.Vertical),
 						Gap = 0.006,
@@ -150,7 +150,7 @@ internal sealed class CameraHealthView
 						[
 							new UiTextRun
 							{
-								Key = $"health-name-text-{camera.Id}",
+								Key = $"health-name-text-{index}",
 								Text = camera.Name,
 								Size = 0.04,
 								MinSize = 0.028,
@@ -158,7 +158,7 @@ internal sealed class CameraHealthView
 							},
 							new UiTextRun
 							{
-								Key = $"health-details-{camera.Id}",
+								Key = $"health-details-{index}",
 								Text = UiText.From(() => _details.Value),
 								Size = 0.028,
 								MinSize = 0.02,
@@ -169,7 +169,7 @@ internal sealed class CameraHealthView
 					},
 					new UiTextRun
 					{
-						Key = $"health-state-{camera.Id}",
+						Key = $"health-state-{index}",
 						Text = UiText.FromLocalized(() => _state.Value),
 						Size = 0.035,
 						MinSize = 0.024,
@@ -178,7 +178,7 @@ internal sealed class CameraHealthView
 					},
 					new UiButton
 					{
-						Key = $"health-retry-{camera.Id}",
+						Key = $"health-retry-{index}",
 						MainSize = UiSize.FromBasis(0.12),
 						Events =
 						[
@@ -196,7 +196,7 @@ internal sealed class CameraHealthView
 						[
 							new UiTextRun
 							{
-								Key = $"health-retry-text-{camera.Id}",
+								Key = $"health-retry-text-{index}",
 								Text = Strings.Health.Retry(),
 								Size = 0.03,
 								MinSize = 0.022,

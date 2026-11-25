@@ -107,19 +107,26 @@ internal static class CameraWidget
 			string.IsNullOrEmpty(providerId) ||
 			string.IsNullOrEmpty(cameraId))
 		{
-			return new CameraWidgetView(Placeholder(Strings.Widgets.Camera.NotConfigured()), null);
+			return new CameraWidgetView(Placeholder(Strings.Widgets.Camera.NotConfigured()), []);
 		}
 
 		var appearance = UiWidgetAppearance.Read(data);
 		var fit = ReadString(data, FitKey) == FitContain ? FitContain : FitCover;
 		var layout = ReadLayout(data);
+		var overlays = new List<CameraOverlay>();
 
 		UiElement content;
 		CameraOverlay? overlay = null;
 
 		if (layout is LayoutSplit or LayoutGrid)
 		{
-			content = BuildMultiContent(layout, data, providerId, fit);
+			content = BuildMultiContent(
+				layout,
+				data,
+				providerId,
+				fit,
+				findStream,
+				overlays);
 		}
 		else
 		{
@@ -138,6 +145,7 @@ internal static class CameraWidget
 					() => findStream(cameraId),
 					Math.Clamp(ReadNumber(data, OverlayBackgroundKey, 0), 0, 100));
 				overlay.Update();
+				overlays.Add(overlay);
 			}
 		}
 
@@ -171,14 +179,16 @@ internal static class CameraWidget
 			]
 		};
 
-		return new CameraWidgetView(root, overlay);
+		return new CameraWidgetView(root, overlays);
 	}
 
 	private static UiStack BuildMultiContent(
 		string layout,
 		JsonElement data,
 		string providerId,
-		string fit)
+		string fit,
+		Func<string, IFrameStream?>? findStream,
+		List<CameraOverlay> overlays)
 	{
 		string?[] cameras = layout == LayoutSplit
 			?
@@ -194,8 +204,17 @@ internal static class CameraWidget
 				ReadString(data, Camera4Key)
 			];
 
+		var overlaysEnabled = ReadBool(data, OverlayKey) && findStream is not null;
+		var opacity = Math.Clamp(ReadNumber(data, OverlayBackgroundKey, 0), 0, 100);
 		var cells = cameras
-			.Select((camera, index) => BuildCell(camera, providerId, fit, index))
+			.Select((camera, index) => BuildCell(
+				camera,
+				providerId,
+				fit,
+				index,
+				overlaysEnabled ? findStream : null,
+				opacity,
+				overlays))
 			.ToList();
 
 		if (layout == LayoutSplit)
@@ -236,7 +255,14 @@ internal static class CameraWidget
 		};
 	}
 
-	private static UiElement BuildCell(string? cameraId, string providerId, string fit, int index)
+	private static UiElement BuildCell(
+		string? cameraId,
+		string providerId,
+		string fit,
+		int index,
+		Func<string, IFrameStream?>? findStream,
+		double backgroundOpacity,
+		List<CameraOverlay> overlays)
 	{
 		if (string.IsNullOrEmpty(cameraId))
 		{
@@ -245,7 +271,7 @@ internal static class CameraWidget
 				$"cell-{index}-empty");
 		}
 
-		return new UiVideoStream
+		var video = new UiVideoStream
 		{
 			Key = $"cell-{index}",
 			Stream = UiValue.Of(new UiVideoStreamReference { Provider = providerId, Id = cameraId }),
@@ -254,6 +280,25 @@ internal static class CameraWidget
 			Fallback = Placeholder(
 				Strings.Widgets.Camera.UpdateRequired(),
 				$"cell-{index}-fallback")
+		};
+
+		if (findStream is null)
+		{
+			return video;
+		}
+
+		var overlay = new CameraOverlay(
+			() => findStream(cameraId),
+			backgroundOpacity,
+			$"cell-{index}-status");
+		overlay.Update();
+		overlays.Add(overlay);
+
+		return new UiLayer
+		{
+			Key = $"cell-{index}-layer",
+			Fill = true,
+			Children = [video, overlay.Build()]
 		};
 	}
 
@@ -521,10 +566,13 @@ internal static class CameraWidget
 }
 
 /// <summary>The widget tree plus the live overlay a session ticks, when the overlay is enabled.</summary>
-internal sealed record CameraWidgetView(UiElement Root, CameraOverlay? Overlay);
+internal sealed record CameraWidgetView(UiElement Root, IReadOnlyList<CameraOverlay> Overlays);
 
 /// <summary>The small status pill drawn over the picture: a live dot and the age of the last frame.</summary>
-internal sealed class CameraOverlay(Func<IFrameStream?> findStream, double backgroundOpacity = 0)
+internal sealed class CameraOverlay(
+	Func<IFrameStream?> findStream,
+	double backgroundOpacity = 0,
+	string keyPrefix = "status")
 {
 	public const string LiveColor = "#22c55e";
 	public const string PendingColor = "#f59e0b";
@@ -549,7 +597,7 @@ internal sealed class CameraOverlay(Func<IFrameStream?> findStream, double backg
 	{
 		var pill = new UiStack
 		{
-			Key = "status-pill",
+			Key = $"{keyPrefix}-pill",
 			Direction = UiValue.Of(UiComponentDirections.Horizontal),
 			Align = UiValue.Of(UiComponentAlignments.Center),
 			Gap = 0.012,
@@ -557,7 +605,7 @@ internal sealed class CameraOverlay(Func<IFrameStream?> findStream, double backg
 			[
 				new UiTextRun
 				{
-					Key = "status-dot",
+					Key = $"{keyPrefix}-dot",
 					Text = "●",
 					Size = 0.04,
 					MinSize = 0.03,
@@ -567,7 +615,7 @@ internal sealed class CameraOverlay(Func<IFrameStream?> findStream, double backg
 				},
 				new UiTextRun
 				{
-					Key = "status-text",
+					Key = $"{keyPrefix}-text",
 					Text = UiText.FromLocalized(() => _text.Value),
 					Size = 0.038,
 					MinSize = 0.028,
@@ -589,7 +637,7 @@ internal sealed class CameraOverlay(Func<IFrameStream?> findStream, double backg
 
 		return new UiStack
 		{
-			Key = "status-overlay",
+			Key = $"{keyPrefix}-overlay",
 			Fill = true,
 			Justify = UiValue.Of(UiComponentJustify.Start),
 			Align = UiValue.Of(UiComponentAlignments.Start),

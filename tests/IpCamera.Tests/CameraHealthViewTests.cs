@@ -40,10 +40,35 @@ public sealed class CameraHealthViewTests
 
 		Assert.Multiple(() =>
 		{
-			Assert.That(ContainsId(view.Tree.Root, "health-retry-camera-1"), Is.True);
-			Assert.That(ContainsId(view.Tree.Root, "health-state-camera-1"), Is.True);
-			Assert.That(ContainsId(view.Tree.Root, "health-details-camera-1"), Is.True);
+			Assert.That(ContainsId(view.Tree.Root, "health-retry-0"), Is.True);
+			Assert.That(ContainsId(view.Tree.Root, "health-state-0"), Is.True);
+			Assert.That(ContainsId(view.Tree.Root, "health-details-0"), Is.True);
+			Assert.That(view.Tree.Root.Id, Does.Contain("health"));
 		});
+	}
+
+	[Test]
+	public async Task Every_node_id_fits_the_host_limit()
+	{
+		var first = Camera();
+		var second = first with { Id = "a-very-long-camera-id-that-would-push-a-row-key-over-the-limit-0000" };
+		await using var registry = new CameraRegistry(_ => new StubStream(first));
+		await registry.SetCamerasAsync([first, second], CancellationToken.None);
+
+		var page = new CameraHealthView(registry);
+		page.Update();
+
+		using var view = new UiView(Surface(), page.Build());
+
+		var longest = LongestId(view.Tree.Root, 0);
+		Assert.That(longest, Is.LessThanOrEqualTo(128));
+	}
+
+	private static int LongestId(UiNode node, int longest)
+	{
+		return node.Children.Aggregate(
+			Math.Max(longest, node.Id.Length),
+			(current, child) => LongestId(child, current));
 	}
 
 	[Test]

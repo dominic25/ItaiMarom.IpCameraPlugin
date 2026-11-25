@@ -253,7 +253,15 @@ internal sealed class PluginIntegration : IPluginIntegration,
 			var view = CameraWidget.BuildView(surface, providerId, _registry.Find);
 			return new ViewSession(
 				new UiView(surface, view.Root),
-				view.Overlay is null ? null : view.Overlay.Update);
+				view.Overlays.Count == 0
+					? null
+					: () =>
+					{
+						foreach (var overlay in view.Overlays)
+						{
+							overlay.Update();
+						}
+					});
 		}
 
 		return null;
