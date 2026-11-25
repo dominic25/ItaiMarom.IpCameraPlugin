@@ -43,6 +43,8 @@ camera picture is a local test stream.
   widget, and the integration page offers a Retry action.
 - **A camera health page**: a Cameras tab on the integration page lists every camera's state, source,
   resolution and last-frame age, with a Retry button that restarts that camera.
+- **A Save snapshot action**: writes the pressed camera's current picture as a JPEG. The folder is set
+  per action; empty means `Pictures\IP Camera`.
 - **A status overlay** (optional, off for existing widgets): a small live dot and the age of the last
   frame on the tile, or "RECONNECTING" when the source drops. New widgets enable it by default. It can
   be turned off in the widget settings, and a background opacity slider controls the dark strip behind

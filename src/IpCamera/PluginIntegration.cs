@@ -66,7 +66,11 @@ internal sealed class PluginIntegration : IPluginIntegration,
 		_onvifDiscovery = onvifDiscovery;
 		_onvifClient = onvifClient;
 		_logger = logger.ForContext<PluginIntegration>();
-		Actions = [new ShowCameraAction(() => _context?.Widgets, _logger)];
+		Actions =
+		[
+			new ShowCameraAction(() => _context?.Widgets, _logger),
+			new SaveSnapshotAction(() => _context?.Widgets, _registry, _logger)
+		];
 	}
 
 	public IReadOnlyList<IActionDefinition> Actions { get; }

@@ -63,11 +63,12 @@ items.
   background opacity slider (0 to 100) controls the dark strip behind it; 0 draws no strip. Tests cover
   the tree, the states, the background and the frame timestamp.
 
-- [ ] **Save snapshot action**
+- [x] **Save snapshot action**
   Add an action that writes the current frame as a JPEG. The folder is configurable, with a default
   under the user's Pictures folder and optionally a per-camera override. Use the camera name and a
   timestamp for the file name, create the folder when missing, and return a failed result when there is
-  no frame. Prime the stream first if nobody is watching it.
+  no frame. Prime the stream first if nobody is watching it. Implemented with the action's own folder
+  parameter and `Pictures\IP Camera` when empty; the per-camera override is not added yet.
 
 - [ ] **Stream quality presets**
   Offer Low, Balanced and High presets per camera, mapping to a frame rate and maximum width, while
