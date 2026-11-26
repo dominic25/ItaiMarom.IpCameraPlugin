@@ -23,9 +23,13 @@ public sealed class CameraModalSessionTests
 	[Test]
 	public async Task A_press_on_the_picture_opens_that_camera()
 	{
-		var surface = Surface(new { camera = "camera-1" });
+		var surface = Surface(new { camera = "camera-1", controls = true });
 		var camera = Camera();
-		var view = CameraWidget.BuildView(surface, ProviderId, _ => new StubStream(camera));
+		var view = CameraWidget.BuildView(
+			surface,
+			ProviderId,
+			_ => new StubStream(camera),
+			(_, _, _) => Task.CompletedTask);
 		var origin = new StubOrigin();
 
 		await using var session = new CameraModalSession(
@@ -46,9 +50,13 @@ public sealed class CameraModalSessionTests
 	[Test]
 	public async Task A_press_runs_the_chosen_script_instead_of_the_modal()
 	{
-		var surface = Surface(new { camera = "camera-1" });
+		var surface = Surface(new { camera = "camera-1", controls = true });
 		var camera = Camera();
-		var view = CameraWidget.BuildView(surface, ProviderId, _ => new StubStream(camera));
+		var view = CameraWidget.BuildView(
+			surface,
+			ProviderId,
+			_ => new StubStream(camera),
+			(_, _, _) => Task.CompletedTask);
 		var origin = new StubOrigin();
 		var scripts = new StubScripts();
 

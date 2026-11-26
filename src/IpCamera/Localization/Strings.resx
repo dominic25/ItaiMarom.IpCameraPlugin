@@ -101,7 +101,7 @@
     <value>Movement arrows</value>
   </data>
   <data name="Widgets.Camera.Config.ControlsDescription" xml:space="preserve">
-    <value>Show left, right, up and down buttons for the camera on this cell. They move a Xiaomi or ONVIF camera without leaving the deck. The arrows make the tile claim presses, so Macro Deck skips the tile's Short Press flow; use a press script for actions.</value>
+    <value>Show left, right, up and down buttons for the camera on this cell. They move a Xiaomi or ONVIF camera without leaving the deck. Arrows make the tile claim presses, so Macro Deck skips the tile's Short Press flow; turn them off to let the Short Press and Long Press actions run, or use a press script to keep the arrows.</value>
   </data>
   <data name="Widgets.Camera.Config.ControlsOpacity" xml:space="preserve">
     <value>Arrow transparency</value>

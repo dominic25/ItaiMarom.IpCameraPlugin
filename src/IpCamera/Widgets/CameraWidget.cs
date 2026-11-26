@@ -138,6 +138,7 @@ internal static class CameraWidget
 		var openTargets = new Dictionary<string, string>(StringComparer.Ordinal);
 		var pressScript = ReadString(data, PressScriptKey);
 		var controlsEnabled = ReadBool(data, ControlsKey) && control is not null;
+		var pressEnabled = controlsEnabled || !string.IsNullOrEmpty(pressScript);
 		var controlsOpacity = Math.Clamp(ReadNumber(data, ControlsOpacityKey, 60), 0, 100) / 100.0;
 
 		UiElement content;
@@ -153,7 +154,7 @@ internal static class CameraWidget
 				fit,
 				findStream,
 				overlays,
-				openTargets,
+				pressEnabled ? openTargets : null,
 				controlsEnabled,
 				controlsOpacity,
 				control);
@@ -178,7 +179,10 @@ internal static class CameraWidget
 				overlays.Add(overlay);
 			}
 
-			openTargets["open-camera"] = cameraId;
+			if (pressEnabled)
+			{
+				openTargets["open-camera"] = cameraId;
+			}
 
 			if (controlsEnabled && findStream?.Invoke(cameraId) is not null)
 			{

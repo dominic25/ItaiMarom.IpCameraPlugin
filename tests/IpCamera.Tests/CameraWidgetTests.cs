@@ -550,8 +550,12 @@ public sealed class CameraWidgetTests
 	[Test]
 	public void The_single_widget_opens_its_camera()
 	{
-		var surface = Surface(new { camera = "camera-1" });
-		var view = CameraWidget.BuildView(surface, ProviderId, null);
+		var surface = Surface(new { camera = "camera-1", controls = true });
+		var view = CameraWidget.BuildView(
+			surface,
+			ProviderId,
+			_ => Stream(),
+			(_, _, _) => Task.CompletedTask);
 
 		using var ui = new UiView(surface, view.Root);
 
@@ -559,6 +563,26 @@ public sealed class CameraWidgetTests
 		{
 			Assert.That(view.OpenTargets["open-camera"], Is.EqualTo("camera-1"));
 			Assert.That(ContainsId(ui.Tree.Root, "open-camera"), Is.True);
+		});
+	}
+
+	[Test]
+	public void With_arrows_off_the_tile_leaves_the_press_to_its_actions()
+	{
+		var surface = Surface(new { camera = "camera-1", controls = false });
+		var view = CameraWidget.BuildView(
+			surface,
+			ProviderId,
+			_ => Stream(),
+			(_, _, _) => Task.CompletedTask);
+
+		using var ui = new UiView(surface, view.Root);
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(view.OpenTargets, Is.Empty);
+			Assert.That(ContainsId(ui.Tree.Root, "open-camera"), Is.False);
+			Assert.That(ContainsId(ui.Tree.Root, "arrows-left"), Is.False);
 		});
 	}
 

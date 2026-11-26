@@ -34,8 +34,9 @@ camera picture is a local test stream.
   short press on a picture opens that cell's camera in a modal as large as Macro Deck's fixed dialog box
   allows. The status overlay is available on every configured cell. Each cell can also show optional
   left, right, up and down arrows with their own opacity, so a Xiaomi or ONVIF camera can be moved from
-  the deck. The arrows make the tile claim presses, so Macro Deck skips the tile's Short Press flow;
-  choose a **Press script** to run actions while the arrows stay.
+  the deck. Arrows make the tile claim presses, so Macro Deck skips the tile's Short Press flow. Turn the
+  arrows off to let the tile's Short Press and Long Press actions run, or choose a **Press script** to
+  keep the arrows and run actions.
 - **A video stream provider**: every configured camera is listed under Source in any widget or action
   that can show a video stream, not only in this plugin's own widget.
 - **A camera setup flow**: one Macro Deck configuration entry per camera. The flow fetches one frame
@@ -66,17 +67,17 @@ camera picture is a local test stream.
 
 ## Running actions from a camera tile
 
-Macro Deck gives a tile press either to the controls in its tree or to its Short Press flow, never both.
-The movement arrows are controls, so they disable the tile's press flows. To run actions with the arrows
-on:
+Macro Deck gives a tile press either to the controls in its tree or to its actions, never both. There are
+two ways to run your own actions:
 
-1. Create a script in Macro Deck with the actions you want.
-2. In the camera widget settings, set **Press script** to that script.
-3. Press the picture. The script runs with the pressed widget and client, and the arrows still move the
-   camera.
+- **Turn the movement arrows off** and leave **Press script** on None. The tile has no controls, so its
+  Short Press and Long Press actions run. Use this to change to a camera folder or run any other action.
+- **Keep the arrows** and set **Press script** to a Macro Deck script. The script runs with the pressed
+  widget and client, and the arrows still move the camera. A script that needs inputs without defaults is
+  not offered.
 
-**None** keeps the press opening the enlarged camera window. A script that needs inputs without defaults
-is not offered.
+With arrows on and no script, the press opens the enlarged camera window. With arrows off and no action,
+the widget's default Show camera action opens it.
 
 ## Requirements
 

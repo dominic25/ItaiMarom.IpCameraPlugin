@@ -49,9 +49,9 @@ of a tile that never plays.
 - The enlarged window keeps the arrows, so a PTZ camera stays controllable while you watch.
 - Move, Stop and Night vision actions for ONVIF cameras and the Xiaomi Mi 360.
 - Macro Deck gives a tile press either to the controls in its tree or to its Short Press flow, never
-  both. The arrows therefore disable the tile's Short Press flow. To run actions and keep the arrows,
-  create a Macro Deck script and pick it as the widget's Press script; the plugin runs that script with
-  the pressed widget and the pressing client.
+  both. The arrows therefore disable the tile's Short Press flow. Turn the arrows off to let the Short
+  Press and Long Press actions run, or create a Macro Deck script and pick it as the widget's Press
+  script to run actions while the arrows stay.
 
 **When a camera drops out**
 

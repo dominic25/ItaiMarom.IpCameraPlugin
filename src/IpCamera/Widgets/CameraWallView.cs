@@ -107,7 +107,7 @@ internal static class CameraWallView
 			Math.Clamp(ReadNumber(configuration, CameraWidget.ControlsOpacityKey, 60), 0, 100) / 100.0);
 	}
 
-	public static UiStack BuildConfiguration(JsonElement configuration)
+	public static UiElement BuildConfiguration(JsonElement configuration)
 	{
 		configuration = Normalize(configuration);
 
@@ -121,12 +121,10 @@ internal static class CameraWallView
 		var controlsOpacity = new UiState<double>(
 			Math.Clamp(ReadNumber(configuration, CameraWidget.ControlsOpacityKey, 60), 0, 100));
 
-		return new UiStack
+		return new UiConfigStack
 		{
 			Key = "camera-wall-config",
 			Direction = UiValue.Of(UiComponentDirections.Vertical),
-			Padding = 0.04,
-			Gap = 0.02,
 			Children =
 			[
 				new UiTextRun
