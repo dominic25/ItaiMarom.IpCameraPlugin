@@ -35,9 +35,12 @@ public sealed class SaveSnapshotTests
 	{
 		var safe = SnapshotWriter.Sanitize("Front: door/1");
 
-		Assert.That(safe, Does.Not.Contain(":"));
-		Assert.That(safe, Does.Not.Contain("/"));
-		Assert.That(safe, Does.Not.Contain("\\"));
+		Assert.Multiple(() =>
+		{
+			Assert.That(safe, Is.EqualTo("Front- door-1"));
+			Assert.That(SnapshotWriter.Sanitize("a<b>c\"d\\e|f?g*h"), Is.EqualTo("a-b-c-d-e-f-g-h"));
+			Assert.That(SnapshotWriter.Sanitize("trailing."), Is.EqualTo("trailing"));
+		});
 	}
 
 	[Test]

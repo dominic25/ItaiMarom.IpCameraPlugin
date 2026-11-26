@@ -157,11 +157,12 @@ internal static class SnapshotWriter
 
 	internal static string Sanitize(string cameraName)
 	{
-		var invalid = Path.GetInvalidFileNameChars();
+		var invalid = new[] { '<', '>', ':', '"', '/', '\\', '|', '?', '*' };
 		var cleaned = new string(cameraName
-			.Select(character => invalid.Contains(character) ? '-' : character)
+			.Select(character => character < ' ' || invalid.Contains(character) ? '-' : character)
 			.ToArray())
-			.Trim();
+			.Trim()
+			.TrimEnd('.');
 
 		return string.IsNullOrEmpty(cleaned) ? "camera" : cleaned;
 	}
