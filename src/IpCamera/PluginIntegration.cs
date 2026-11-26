@@ -216,7 +216,7 @@ internal sealed class PluginIntegration : IPluginIntegration,
 
 		if (surface.Kind == UiSurfaceKinds.Dialog &&
 			surface.Attributes.TryGetValue(UiDialogSurfaceAttributes.ViewId, out var viewId) &&
-			viewId.GetString() == ShowCameraAction.ModalViewId)
+			IsCameraModal(viewId.GetString()))
 		{
 			return Create(surface, CameraWidget.BuildModal(surface, _providerQualifiedId));
 		}
@@ -304,6 +304,13 @@ internal sealed class PluginIntegration : IPluginIntegration,
 	{
 		return widgetType is not null &&
 			widgetType.EndsWith("::" + CameraWidget.TypeId, StringComparison.Ordinal);
+	}
+
+	internal static bool IsCameraModal(string? viewId)
+	{
+		return viewId is not null &&
+			(viewId == ShowCameraAction.ModalViewId ||
+				viewId.EndsWith("::" + ShowCameraAction.ModalViewId, StringComparison.Ordinal));
 	}
 
 	private bool IsCameraWall(string? viewId)
