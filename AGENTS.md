@@ -153,8 +153,8 @@ Before packing a release:
 
 ```bash
 macrodeck-plugin build --source src/IpCamera --output ./artifacts
-macrodeck-plugin inspect --artifact ./artifacts/com.itaimarom.ip-camera-1.5.1.macroDeckPlugin
-macrodeck-plugin validate --level publication --artifact ./artifacts/com.itaimarom.ip-camera-1.5.1.macroDeckPlugin
+macrodeck-plugin inspect --artifact ./artifacts/com.itaimarom.ip-camera-1.5.2.macroDeckPlugin
+macrodeck-plugin validate --level publication --artifact ./artifacts/com.itaimarom.ip-camera-1.5.2.macroDeckPlugin
 ```
 
 The tests need no camera and no ffmpeg: the end-to-end test runs a local HTTP snapshot server. Do not
