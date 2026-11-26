@@ -41,11 +41,10 @@ items.
   is its own video stream session, so one tile can show a small camera wall. Reuse the camera picker,
   the fit setting and the appearance handling; keep the single-camera layout as the default. Test the
   four-cell tree, an empty cell, and the modal on a pressed cell.
-  **Pressed-cell modal is blocked on the 3.0.5 SDK**: the short-press action knows the widget, not the
-  cell that was pressed, so the widget opens the first camera in the modal instead. The grid is
-  implemented with `layout` (`single`, `split`, `grid`), `camera2`, `camera3` and `camera4`; the status
-  overlay remains on the single-camera layout. Revisit the per-cell modal when the action context
-  carries the pressed node.
+  The grid is implemented with `layout` (`single`, `split`, `grid`), `camera2`, `camera3` and
+  `camera4`. Each cell has its own status overlay and press area, so a press opens that cell's camera;
+  the widget's default short-press action still only knows the widget, not the cell, so a custom flow
+  cannot tell cells apart.
 
 - [ ] **Camera health page**
   Add an integration page that lists every camera with its state, source type, resolution, last frame
