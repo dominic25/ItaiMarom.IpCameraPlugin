@@ -34,10 +34,12 @@ camera picture is a local test stream.
   short press on a picture opens that cell's camera in a modal as large as Macro Deck's fixed dialog box
   allows. The **Open the camera window** setting controls that press: turn it off to let the widget's
   Short Press and Long Press actions run. Macro Deck gives a press either to a tile's controls or to its
-  actions, so the tile arrows are hidden while the setting is off; the enlarged window keeps its arrows.
-  The status overlay is available on every configured cell. With the setting on, each cell can also show
-  optional left, right, up and down arrows with their own opacity, so a Xiaomi or ONVIF camera can be
-  moved from the deck.
+  actions, so the tile arrows are hidden while the setting is off. To keep the arrows and still run
+  actions, choose a **Press script**: a Macro Deck script runs on the press, with the tile's widget and
+  client, while the arrows stay. Plugins can run scripts but cannot run another action or a tile flow.
+  The status overlay is available on every configured cell. With the window or a press script enabled,
+  each cell can also show optional left, right, up and down arrows with their own opacity, so a Xiaomi or
+  ONVIF camera can be moved from the deck.
 - **A video stream provider**: every configured camera is listed under Source in any widget or action
   that can show a video stream, not only in this plugin's own widget.
 - **A camera setup flow**: one Macro Deck configuration entry per camera. The flow fetches one frame

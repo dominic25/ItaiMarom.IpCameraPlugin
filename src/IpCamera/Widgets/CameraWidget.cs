@@ -6,6 +6,7 @@ using IpCamera.Streaming;
 using MacroDeck.Localization;
 using MacroDeck.Sdk.Ui;
 using MacroDeck.Sdk.VideoStreams;
+using MacroDeck.Sdk.Scripts;
 using MacroDeck.Sdk.Widgets;
 using MacroDeck.Ui.Config;
 using MacroDeck.Ui.Config.Options;
@@ -39,6 +40,7 @@ internal static class CameraWidget
 	public const string ControlsKey = "controls";
 	public const string ControlsOpacityKey = "controlsOpacity";
 	public const string OpenWindowKey = "openWindow";
+	public const string PressScriptKey = "pressScript";
 	public const string LayoutKey = "layout";
 	public const string Camera2Key = "camera2";
 	public const string Camera3Key = "camera3";
@@ -66,6 +68,7 @@ internal static class CameraWidget
 		    "controls": { "type": "boolean" },
 		    "controlsOpacity": { "type": "number" },
 		    "openWindow": { "type": "boolean" },
+		    "pressScript": { "type": "string" },
 		    "flows": { "type": "array" },
 		    "backgroundColor": { "type": "string" },
 		    "label": { "type": "string" },
@@ -86,7 +89,7 @@ internal static class CameraWidget
 			TypeId,
 			Strings.Widgets.Camera.Name(),
 			Strings.Widgets.Camera.Description(),
-			DefaultData: $$"""{"{{CameraKey}}":"","{{FitKey}}":"{{FitCover}}","{{OverlayKey}}":true,"{{OverlayBackgroundKey}}":0,"{{ControlsKey}}":false,"{{ControlsOpacityKey}}":60,"{{OpenWindowKey}}":true,"{{LayoutKey}}":"{{LayoutSingle}}"}""",
+			DefaultData: $$"""{"{{CameraKey}}":"","{{FitKey}}":"{{FitCover}}","{{OverlayKey}}":true,"{{OverlayBackgroundKey}}":0,"{{ControlsKey}}":false,"{{ControlsOpacityKey}}":60,"{{OpenWindowKey}}":true,"{{PressScriptKey}}":"","{{LayoutKey}}":"{{LayoutSingle}}"}""",
 			DataSchema: DataSchema,
 			HasConfiguration: true)
 		{
@@ -126,7 +129,8 @@ internal static class CameraWidget
 				[],
 				new Dictionary<string, string>(),
 				false,
-				0.6);
+				0.6,
+				null);
 		}
 
 		var appearance = UiWidgetAppearance.Read(data);
@@ -137,7 +141,9 @@ internal static class CameraWidget
 		var openWindow = data.ValueKind != JsonValueKind.Object ||
 			!data.TryGetProperty(OpenWindowKey, out var storedOpenWindow) ||
 			storedOpenWindow.ValueKind != JsonValueKind.False;
-		var controlsEnabled = ReadBool(data, ControlsKey) && control is not null && openWindow;
+		var pressScript = ReadString(data, PressScriptKey);
+		var pressEnabled = openWindow || !string.IsNullOrEmpty(pressScript);
+		var controlsEnabled = ReadBool(data, ControlsKey) && control is not null && pressEnabled;
 		var controlsOpacity = Math.Clamp(ReadNumber(data, ControlsOpacityKey, 60), 0, 100) / 100.0;
 
 		UiElement content;
@@ -153,7 +159,7 @@ internal static class CameraWidget
 				fit,
 				findStream,
 				overlays,
-				openWindow ? openTargets : null,
+				pressEnabled ? openTargets : null,
 				controlsEnabled,
 				controlsOpacity,
 				control);
@@ -178,7 +184,7 @@ internal static class CameraWidget
 				overlays.Add(overlay);
 			}
 
-			if (openWindow)
+			if (pressEnabled)
 			{
 				openTargets["open-camera"] = cameraId;
 			}
@@ -229,7 +235,13 @@ internal static class CameraWidget
 			]
 		};
 
-		return new CameraWidgetView(root, overlays, openTargets, controlsEnabled, controlsOpacity);
+		return new CameraWidgetView(
+			root,
+			overlays,
+			openTargets,
+			controlsEnabled,
+			controlsOpacity,
+			pressScript);
 	}
 
 	internal static UiButton OpenButton(string key)
@@ -534,7 +546,32 @@ internal static class CameraWidget
 		};
 	}
 
-	public static UiElement BuildConfiguration(UiSurface surface)
+	internal static List<UiOption> BuildScriptOptions(IReadOnlyList<Script>? scripts)
+	{
+		var options = new List<UiOption>
+		{
+			new() { Value = string.Empty, Label = Strings.Widgets.Camera.Config.PressScriptNone() }
+		};
+
+		if (scripts is not null)
+		{
+			options.AddRange(scripts
+				.Where(script => script.Inputs.All(input =>
+					!input.Required || !string.IsNullOrWhiteSpace(input.DefaultValue)))
+				.OrderBy(script => script.Name, StringComparer.OrdinalIgnoreCase)
+				.Select(script => new UiOption
+				{
+					Value = script.Id,
+					Label = LocalizedText.FromLiteral(script.Name)
+				}));
+		}
+
+		return options;
+	}
+
+	public static UiElement BuildConfiguration(
+		UiSurface surface,
+		IReadOnlyList<Script>? scripts = null)
 	{
 		var data = UiWidgetSurface.Data(surface);
 		var layout = new UiState<string>(ReadLayout(data));
@@ -553,6 +590,8 @@ internal static class CameraWidget
 			data.ValueKind != JsonValueKind.Object ||
 			!data.TryGetProperty(OpenWindowKey, out var storedOpenWindow) ||
 			storedOpenWindow.ValueKind != JsonValueKind.False);
+		var pressScript = new UiState<string>(ReadString(data, PressScriptKey) ?? string.Empty);
+		var scriptOptions = BuildScriptOptions(scripts);
 		var flows = new UiState<JsonElement>(
 			data.ValueKind == JsonValueKind.Object &&
 			data.TryGetProperty("flows", out var stored) &&
@@ -671,6 +710,14 @@ internal static class CameraWidget
 						Label = Strings.Widgets.Camera.Config.OpenWindow(),
 						Description = Strings.Widgets.Camera.Config.OpenWindowDescription(),
 						Binding = Bind.To(openWindow)
+					},
+					new UiChoiceInput
+					{
+						Key = PressScriptKey,
+						Label = Strings.Widgets.Camera.Config.PressScript(),
+						Description = Strings.Widgets.Camera.Config.PressScriptDescription(),
+						Options = UiValue.Of<IReadOnlyList<UiOption>>(scriptOptions),
+						Binding = Bind.To(pressScript)
 					},
 					UiWidgetAppearance.Section(data, UiWidgetAppearanceFields.All)
 				]
@@ -806,7 +853,8 @@ internal sealed record CameraWidgetView(
 	IReadOnlyList<CameraOverlay> Overlays,
 	IReadOnlyDictionary<string, string> OpenTargets,
 	bool Controls,
-	double ControlsOpacity);
+	double ControlsOpacity,
+	string? PressScript);
 
 /// <summary>The small status pill drawn over the picture: a live dot and the age of the last frame.</summary>
 internal sealed class CameraOverlay(

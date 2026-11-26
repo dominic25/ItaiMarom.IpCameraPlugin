@@ -113,7 +113,22 @@
     <value>Open the camera window</value>
   </data>
   <data name="Widgets.Camera.Config.OpenWindowDescription" xml:space="preserve">
-    <value>Open the camera in the enlarged window on a short press. Turn it off to let the Short Press and Long Press actions below run. The tile arrows are hidden then, because a press goes either to the tile controls or to the tile actions; the enlarged window keeps its arrows.</value>
+    <value>Open the camera in the enlarged window on a short press. Turn it off to let the Short Press and Long Press actions below run; the tile arrows are hidden then, because a press goes either to the tile controls or to the tile actions. Choose a press script to keep the arrows and run actions.</value>
+  </data>
+  <data name="Widgets.Camera.Config.PressScript" xml:space="preserve">
+    <value>Press script</value>
+  </data>
+  <data name="Widgets.Camera.Config.PressScriptDescription" xml:space="preserve">
+    <value>Run a Macro Deck script when the picture is pressed. A plugin can run scripts but not the tile's Short Press flow, so a script keeps the tile arrows available. Leave it on None to use Open the camera window.</value>
+  </data>
+  <data name="Widgets.Camera.Config.PressScriptNone" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="Widgets.Camera.PressScript.Failed" xml:space="preserve">
+    <value>The press script failed.</value>
+  </data>
+  <data name="Widgets.Camera.PressScript.Unavailable" xml:space="preserve">
+    <value>The press script could not run.</value>
   </data>
   <data name="Widgets.Camera.Overlay.Live" xml:space="preserve">
     <value>LIVE</value>

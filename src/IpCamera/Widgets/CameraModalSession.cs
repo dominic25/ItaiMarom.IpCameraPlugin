@@ -1,6 +1,8 @@
 using System.Text.Json;
 using IpCamera.Actions;
 using MacroDeck.Localization;
+using MacroDeck.Sdk.Actions;
+using MacroDeck.Sdk.Scripts;
 using MacroDeck.Sdk.Ui;
 using MacroDeck.Ui.Components;
 using MacroDeck.Ui.Model.Events;
@@ -11,23 +13,32 @@ using MacroDeck.Ui.Runtime;
 namespace IpCamera.Widgets;
 
 /// <summary>
-/// Wraps the view session so a press on the picture opens that camera's modal directly from the
-/// UI event origin. The widget's default short-press action needs an action client and is blocked by the
-/// arrow overlay; the event origin is the connected screen, so this works from the same press.
+/// Wraps the view session so a press on the picture acts from the UI event origin. With a press script it
+/// runs that script on the pressed widget; otherwise it opens that camera's modal. The widget's own
+/// Short Press flow cannot run here because the arrow controls claim the tile press.
 /// </summary>
 internal sealed class CameraModalSession : IUiSession, IAsyncDisposable
 {
 	private readonly ViewSession _inner;
 	private readonly IReadOnlyDictionary<string, ModalDefinition> _modals;
+	private readonly string? _pressScript;
+	private readonly IScriptApi? _scripts;
+	private readonly string? _widgetId;
 
 	public CameraModalSession(
 		UiView view,
 		IReadOnlyDictionary<string, string> openTargets,
 		bool controls = true,
 		double controlsOpacity = 0.6,
+		string? pressScript = null,
+		IScriptApi? scripts = null,
+		string? widgetId = null,
 		Action? update = null)
 	{
 		_inner = new ViewSession(view, update);
+		_pressScript = pressScript;
+		_scripts = scripts;
+		_widgetId = widgetId;
 		_modals = openTargets.ToDictionary(
 			pair => pair.Key,
 			pair => CreateModal(pair.Value, controls, controlsOpacity),
@@ -69,7 +80,15 @@ internal sealed class CameraModalSession : IUiSession, IAsyncDisposable
 			{
 				if (uiEvent.NodeId.EndsWith(pair.Key, StringComparison.Ordinal))
 				{
-					_ = OpenAsync(origin, pair.Value);
+					if (!string.IsNullOrEmpty(_pressScript))
+					{
+						_ = RunScriptAsync(origin, _pressScript);
+					}
+					else
+					{
+						_ = OpenAsync(origin, pair.Value);
+					}
+
 					return;
 				}
 			}
@@ -81,6 +100,35 @@ internal sealed class CameraModalSession : IUiSession, IAsyncDisposable
 	public ValueTask DisposeAsync()
 	{
 		return _inner.DisposeAsync();
+	}
+
+	private async Task RunScriptAsync(IUiEventOrigin origin, string scriptId)
+	{
+		try
+		{
+			if (_scripts is null)
+			{
+				await origin
+					.ReportFailureAsync(Strings.Widgets.Camera.PressScript.Unavailable(), CancellationToken.None)
+					.ConfigureAwait(false);
+				return;
+			}
+
+			var result = await _scripts
+				.RunAsync(scriptId, null, origin.ClientId, _widgetId, CancellationToken.None)
+				.ConfigureAwait(false);
+
+			if (result.Status != ActionResultStatus.Succeeded)
+			{
+				await origin
+					.ReportFailureAsync(Strings.Widgets.Camera.PressScript.Failed(), CancellationToken.None)
+					.ConfigureAwait(false);
+			}
+		}
+		catch (Exception)
+		{
+			// The screen or the script may have gone away between the press and the run.
+		}
 	}
 
 	private static ModalDefinition CreateModal(

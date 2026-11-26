@@ -3,6 +3,7 @@ using IpCamera.Actions;
 using IpCamera.Cameras;
 using IpCamera.Streaming;
 using IpCamera.Widgets;
+using MacroDeck.Sdk.Scripts;
 using MacroDeck.Sdk.VideoStreams;
 using MacroDeck.Ui.Model.Nodes;
 using MacroDeck.Ui.Model.Surfaces;
@@ -601,6 +602,53 @@ public sealed class CameraWidgetTests
 			Assert.That(ContainsId(ui.Tree.Root, "open-camera-0"), Is.False);
 			Assert.That(ContainsId(ui.Tree.Root, "open-camera-1"), Is.False);
 			Assert.That(ContainsId(ui.Tree.Root, "c0-left"), Is.False);
+		});
+	}
+
+	[Test]
+	public void A_press_script_keeps_the_tile_arrows()
+	{
+		var surface = Surface(new
+		{
+			camera = "camera-1",
+			controls = true,
+			openWindow = false,
+			pressScript = "script-1"
+		});
+		var view = CameraWidget.BuildView(
+			surface,
+			ProviderId,
+			_ => Stream(),
+			(_, _, _) => Task.CompletedTask);
+
+		using var ui = new UiView(surface, view.Root);
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(view.OpenTargets, Is.Not.Empty);
+			Assert.That(ContainsId(ui.Tree.Root, "arrows-left"), Is.True);
+		});
+	}
+
+	[Test]
+	public void The_script_picker_lists_scripts_that_need_no_input()
+	{
+		var options = CameraWidget.BuildScriptOptions(
+		[
+			new Script { Id = "script-1", Name = "Notify" },
+			new Script
+			{
+				Id = "script-2",
+				Name = "Needs input",
+				Inputs = [new ScriptInput { Name = "title", Required = true }]
+			}
+		]);
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(options, Has.Count.EqualTo(2));
+			Assert.That(options[0].Value, Is.Empty);
+			Assert.That(options[1].Value, Is.EqualTo("script-1"));
 		});
 	}
 

@@ -3,6 +3,8 @@ using IpCamera.Cameras;
 using IpCamera.Streaming;
 using IpCamera.Widgets;
 using MacroDeck.Localization;
+using MacroDeck.Sdk.Actions;
+using MacroDeck.Sdk.Scripts;
 using MacroDeck.Sdk.Ui;
 using MacroDeck.Sdk.VideoStreams;
 using MacroDeck.Ui.Components;
@@ -39,6 +41,38 @@ public sealed class CameraModalSessionTests
 		Assert.That(origin.Modal, Is.Not.Null);
 		Assert.That(origin.Modal!.ViewId, Is.EqualTo("camera"));
 		Assert.That(origin.Modal.Data!["camera"].GetString(), Is.EqualTo("camera-1"));
+	}
+
+	[Test]
+	public async Task A_press_runs_the_chosen_script_instead_of_the_modal()
+	{
+		var surface = Surface(new { camera = "camera-1" });
+		var camera = Camera();
+		var view = CameraWidget.BuildView(surface, ProviderId, _ => new StubStream(camera));
+		var origin = new StubOrigin();
+		var scripts = new StubScripts();
+
+		await using var session = new CameraModalSession(
+			new UiView(surface, view.Root),
+			view.OpenTargets,
+			pressScript: "script-1",
+			scripts: scripts,
+			widgetId: "widget-1");
+
+		session.Dispatch(
+			new UiEvent { NodeId = "root.layer.open-camera", Name = UiComponentEvents.Press },
+			origin);
+
+		await Task.Delay(20);
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(scripts.Runs, Has.Count.EqualTo(1));
+			Assert.That(scripts.Runs[0], Is.EqualTo("script-1"));
+			Assert.That(scripts.OriginClientId, Is.EqualTo("client-1"));
+			Assert.That(scripts.OwnerWidgetId, Is.EqualTo("widget-1"));
+			Assert.That(origin.Modal, Is.Null);
+		});
 	}
 
 	private static CameraDefinition Camera()
@@ -151,6 +185,33 @@ public sealed class CameraModalSessionTests
 		public ValueTask DisposeAsync()
 		{
 			return ValueTask.CompletedTask;
+		}
+	}
+
+	private sealed class StubScripts : IScriptApi
+	{
+		public List<string> Runs { get; } = [];
+
+		public string? OriginClientId { get; private set; }
+
+		public string? OwnerWidgetId { get; private set; }
+
+		public IReadOnlyList<Script> GetScripts()
+		{
+			return [];
+		}
+
+		public Task<ActionResult> RunAsync(
+			string scriptId,
+			IReadOnlyDictionary<string, object?>? inputs = null,
+			string? originClientId = null,
+			string? ownerWidgetId = null,
+			CancellationToken cancellationToken = default)
+		{
+			Runs.Add(scriptId);
+			OriginClientId = originClientId;
+			OwnerWidgetId = ownerWidgetId;
+			return Task.FromResult(ActionResult.Success());
 		}
 	}
 }

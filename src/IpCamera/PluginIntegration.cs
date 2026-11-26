@@ -13,6 +13,7 @@ using MacroDeck.Sdk.Actions;
 using MacroDeck.Sdk.ConfigFlow;
 using MacroDeck.Sdk.FolderViews;
 using MacroDeck.Sdk.Issues;
+using MacroDeck.Sdk.Scripts;
 using MacroDeck.Sdk.Ui;
 using MacroDeck.Sdk.VideoStreams;
 using MacroDeck.Sdk.Widgets;
@@ -249,7 +250,7 @@ internal sealed class PluginIntegration : IPluginIntegration,
 
 		if (UiWidgetSurface.IsConfigurationFor(surface, widgetTypeId))
 		{
-			return Create(surface, CameraWidget.BuildConfiguration(surface));
+			return Create(surface, CameraWidget.BuildConfiguration(surface, ReadScripts()));
 		}
 
 		if (UiWidgetSurface.IsFor(surface, widgetTypeId))
@@ -265,6 +266,11 @@ internal sealed class PluginIntegration : IPluginIntegration,
 				view.OpenTargets,
 				view.Controls,
 				view.ControlsOpacity,
+				view.PressScript,
+				_context?.Scripts,
+				surface.Attributes.TryGetValue(UiWidgetSurfaceAttributes.WidgetId, out var widgetId)
+					? widgetId.GetString()
+					: null,
 				view.Overlays.Count == 0
 					? null
 					: () =>
@@ -401,6 +407,19 @@ internal sealed class PluginIntegration : IPluginIntegration,
 			await _provider.DisposeAsync().ConfigureAwait(false);
 			_provider = null;
 			_providerQualifiedId = null;
+		}
+	}
+
+	private IReadOnlyList<Script> ReadScripts()
+	{
+		try
+		{
+			return _context?.Scripts.GetScripts() ?? [];
+		}
+		catch (Exception exception)
+		{
+			_logger.Debug("Could not read the scripts: {Reason}", exception.Message);
+			return [];
 		}
 	}
 
