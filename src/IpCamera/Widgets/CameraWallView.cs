@@ -21,7 +21,8 @@ internal static class CameraWallView
 		JsonElement configuration,
 		string? providerId,
 		Func<string, CameraDefinition?>? findCamera = null,
-		CameraControlHandler? control = null)
+		CameraControlHandler? control = null,
+		Dictionary<string, string>? openTargets = null)
 	{
 		configuration = Normalize(configuration);
 
@@ -51,7 +52,8 @@ internal static class CameraWallView
 				index,
 				controlsEnabled ? findCamera : null,
 				controlsOpacity,
-				control))
+				control,
+				openTargets))
 			.ToList();
 
 		if (columns == 1)
@@ -206,7 +208,8 @@ internal static class CameraWallView
 		int index,
 		Func<string, CameraDefinition?>? findCamera,
 		double controlsOpacity,
-		CameraControlHandler? control)
+		CameraControlHandler? control,
+		Dictionary<string, string>? openTargets)
 	{
 		if (string.IsNullOrEmpty(camera))
 		{
@@ -230,7 +233,24 @@ internal static class CameraWallView
 				$"wall-cell-{index}-fallback")
 		};
 
-		if (control is null || findCamera?.Invoke(camera) is null)
+		var children = new List<UiElement> { video };
+
+		if (openTargets is not null)
+		{
+			openTargets[$"open-camera-{index}"] = camera!;
+			children.Add(CameraWidget.OpenButton($"open-camera-{index}"));
+		}
+
+		if (control is not null && findCamera?.Invoke(camera) is not null)
+		{
+			children.Add(CameraWidget.ArrowPad(
+				camera!,
+				controlsOpacity,
+				control,
+				$"w{index}"));
+		}
+
+		if (children.Count == 1)
 		{
 			return video;
 		}
@@ -239,15 +259,7 @@ internal static class CameraWallView
 		{
 			Key = $"wall-cell-{index}-layer",
 			Fill = true,
-			Children =
-			[
-				video,
-				CameraWidget.ArrowPad(
-					camera!,
-					controlsOpacity,
-					control,
-					$"w{index}")
-			]
+			Children = children
 		};
 	}
 

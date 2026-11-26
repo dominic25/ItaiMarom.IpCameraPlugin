@@ -488,6 +488,27 @@ public sealed class CameraWidgetTests
 		}
 	}
 
+	[Test]
+	public void The_single_widget_opens_its_camera()
+	{
+		var surface = Surface(new { camera = "camera-1" });
+		var view = CameraWidget.BuildView(surface, ProviderId, null);
+
+		using var ui = new UiView(surface, view.Root);
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(view.OpenTargets["open-camera"], Is.EqualTo("camera-1"));
+			Assert.That(HasId(ui.Tree.Root, "open-camera"), Is.True);
+		});
+	}
+
+	private static bool HasId(UiNode node, string id)
+	{
+		return node.Id.EndsWith(id, StringComparison.Ordinal) ||
+			node.Children.Any(child => HasId(child, id));
+	}
+
 	private static UiSurface Surface(object data)	{
 		return new UiSurface
 		{

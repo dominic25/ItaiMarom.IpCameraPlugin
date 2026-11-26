@@ -31,9 +31,10 @@ camera picture is a local test stream.
 
 - **A Camera widget**: one, two or four cameras on the same tile. Pick a camera per cell, choose whether
   the pictures fill their cell or fit inside it, and give the widget a label, background and colours. A
-  short press opens the first camera in a modal as large as Macro Deck's fixed dialog box allows; the
-  status overlay is available on every configured cell. Each cell can also show optional left, right,
-  up and down arrows with their own opacity, so a Xiaomi or ONVIF camera can be moved from the deck.
+  short press on a picture opens that cell's camera in a modal as large as Macro Deck's fixed dialog box
+  allows. The status overlay is available on every configured cell. Each cell can also show optional
+  left, right, up and down arrows with their own opacity, so a Xiaomi or ONVIF camera can be moved from
+  the deck.
 - **A video stream provider**: every configured camera is listed under Source in any widget or action
   that can show a video stream, not only in this plugin's own widget.
 - **A camera setup flow**: one Macro Deck configuration entry per camera. The flow fetches one frame
@@ -138,8 +139,8 @@ How the chosen cameras are laid out:
 | 4 | stacked | 2 x 2 |
 
 A single camera always fills the folder, which is the quickest way to give one camera a whole page. The
-wall has no widgets of its own, so pressing a camera does not open the modal and there is nothing to
-configure per cell; it is a display.
+wall has no widgets of its own; pressing a cell opens that cell's camera in the modal. Per-cell arrows
+are available when the wall controls are switched on.
 
 Each cell can also show the same movement arrows as the camera widget. Enable **Movement arrows** in the
 wall's Configuration and set **Arrow transparency**; every configured cell then draws left, right, up and

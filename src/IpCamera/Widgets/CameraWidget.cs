@@ -119,13 +119,17 @@ internal static class CameraWidget
 			string.IsNullOrEmpty(providerId) ||
 			string.IsNullOrEmpty(cameraId))
 		{
-			return new CameraWidgetView(Placeholder(Strings.Widgets.Camera.NotConfigured()), []);
+			return new CameraWidgetView(
+				Placeholder(Strings.Widgets.Camera.NotConfigured()),
+				[],
+				new Dictionary<string, string>());
 		}
 
 		var appearance = UiWidgetAppearance.Read(data);
 		var fit = ReadString(data, FitKey) == FitContain ? FitContain : FitCover;
 		var layout = ReadLayout(data);
 		var overlays = new List<CameraOverlay>();
+		var openTargets = new Dictionary<string, string>(StringComparer.Ordinal);
 		var controlsEnabled = ReadBool(data, ControlsKey) && control is not null;
 		var controlsOpacity = Math.Clamp(ReadNumber(data, ControlsOpacityKey, 60), 0, 100) / 100.0;
 
@@ -142,6 +146,7 @@ internal static class CameraWidget
 				fit,
 				findStream,
 				overlays,
+				openTargets,
 				controlsEnabled,
 				controlsOpacity,
 				control);
@@ -166,6 +171,8 @@ internal static class CameraWidget
 				overlays.Add(overlay);
 			}
 
+			openTargets["open-camera"] = cameraId;
+
 			if (controlsEnabled && findStream?.Invoke(cameraId) is not null)
 			{
 				arrows = ArrowPad(cameraId, controlsOpacity, control!, "arrows");
@@ -182,6 +189,11 @@ internal static class CameraWidget
 		if (overlay is not null)
 		{
 			children.Add(overlay.Build());
+		}
+
+		if (layout is not (LayoutSplit or LayoutGrid) && openTargets.ContainsKey("open-camera"))
+		{
+			children.Add(OpenButton("open-camera"));
 		}
 
 		if (arrows is not null)
@@ -207,7 +219,18 @@ internal static class CameraWidget
 			]
 		};
 
-		return new CameraWidgetView(root, overlays);
+		return new CameraWidgetView(root, overlays, openTargets);
+	}
+
+	internal static UiButton OpenButton(string key)
+	{
+		return new UiButton
+		{
+			Key = key,
+			Fill = true,
+			Background = UiValue.Of("transparent"),
+			Events = [UiEventHandler.On(UiComponentEvents.Press, () => { })]
+		};
 	}
 
 	private static UiStack BuildMultiContent(
@@ -217,6 +240,7 @@ internal static class CameraWidget
 		string fit,
 		Func<string, IFrameStream?>? findStream,
 		List<CameraOverlay> overlays,
+		Dictionary<string, string> openTargets,
 		bool controlsEnabled,
 		double controlsOpacity,
 		CameraControlHandler? control)
@@ -246,6 +270,7 @@ internal static class CameraWidget
 				overlayEnabled ? findStream : null,
 				opacity,
 				overlays,
+				openTargets,
 				controlsEnabled ? findStream : null,
 				controlsOpacity,
 				control))
@@ -297,6 +322,7 @@ internal static class CameraWidget
 		Func<string, IFrameStream?>? findStream,
 		double backgroundOpacity,
 		List<CameraOverlay> overlays,
+		Dictionary<string, string> openTargets,
 		Func<string, IFrameStream?>? controlsFinder,
 		double controlsOpacity,
 		CameraControlHandler? control)
@@ -331,6 +357,9 @@ internal static class CameraWidget
 			overlays.Add(overlay);
 			children.Add(overlay.Build());
 		}
+
+		openTargets[$"open-camera-{index}"] = cameraId;
+		children.Add(OpenButton($"open-camera-{index}"));
 
 		if (control is not null &&
 			controlsFinder?.Invoke(cameraId) is not null)
@@ -731,7 +760,10 @@ internal static class CameraWidget
 }
 
 /// <summary>The widget tree plus the live overlay a session ticks, when the overlay is enabled.</summary>
-internal sealed record CameraWidgetView(UiElement Root, IReadOnlyList<CameraOverlay> Overlays);
+internal sealed record CameraWidgetView(
+	UiElement Root,
+	IReadOnlyList<CameraOverlay> Overlays,
+	IReadOnlyDictionary<string, string> OpenTargets);
 
 /// <summary>The small status pill drawn over the picture: a live dot and the age of the last frame.</summary>
 internal sealed class CameraOverlay(

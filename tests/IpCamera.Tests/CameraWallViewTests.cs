@@ -168,6 +168,25 @@ public sealed class CameraWallViewTests
 	}
 
 	[Test]
+	public void Every_configured_cell_opens_its_own_camera()
+	{
+		var config = JsonSerializer.SerializeToElement(new { camera1 = "camera-1", camera2 = "camera-2", columns = "2" });
+		var targets = new Dictionary<string, string>(StringComparer.Ordinal);
+
+		using var view = new UiView(Surface(), CameraWallView.Build(config, ProviderId, openTargets: targets));
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(targets, Is.EqualTo(new Dictionary<string, string>
+			{
+				["open-camera-0"] = "camera-1",
+				["open-camera-1"] = "camera-2"
+			}));
+			Assert.That(ContainsId(view.Tree.Root, "open-camera-0"), Is.True);
+		});
+	}
+
+	[Test]
 	public void The_folder_configuration_offers_arrows_and_their_opacity()
 	{
 		var config = JsonSerializer.SerializeToElement(new { camera1 = "camera-1" });

@@ -192,13 +192,15 @@ internal sealed class PluginIntegration : IPluginIntegration,
 				UiFolderSurfaceAttributes.Configuration,
 				out var stored) ? stored : default;
 
-			return Create(
-				surface,
-				CameraWallView.Build(
-					configuration,
-					_providerQualifiedId,
-					id => _registry.Find(id)?.Definition,
-					ControlCameraAsync));
+			var openTargets = new Dictionary<string, string>(StringComparer.Ordinal);
+			var wall = CameraWallView.Build(
+				configuration,
+				_providerQualifiedId,
+				id => _registry.Find(id)?.Definition,
+				ControlCameraAsync,
+				openTargets);
+
+			return new CameraModalSession(new UiView(surface, wall), openTargets);
 		}
 
 		if (surface.Kind == UiSurfaceKinds.Config &&
@@ -247,8 +249,9 @@ internal sealed class PluginIntegration : IPluginIntegration,
 				providerId,
 				_registry.Find,
 				ControlCameraAsync);
-			return new ViewSession(
+			return new CameraModalSession(
 				new UiView(surface, view.Root),
+				view.OpenTargets,
 				view.Overlays.Count == 0
 					? null
 					: () =>
