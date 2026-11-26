@@ -23,7 +23,7 @@ namespace IpCamera.Widgets;
 
 /// <summary>Runs one control for the arrows drawn on a widget cell.</summary>
 internal delegate Task CameraControlHandler(
-	CameraDefinition camera,
+	string cameraId,
 	CameraControlOperation operation,
 	CancellationToken cancellationToken);
 
@@ -166,9 +166,9 @@ internal static class CameraWidget
 				overlays.Add(overlay);
 			}
 
-			if (controlsEnabled && findStream?.Invoke(cameraId)?.Definition is { } definition)
+			if (controlsEnabled && findStream?.Invoke(cameraId) is not null)
 			{
-				arrows = ArrowPad(definition, controlsOpacity, control!, "arrows");
+				arrows = ArrowPad(cameraId, controlsOpacity, control!, "arrows");
 			}
 		}
 
@@ -333,9 +333,9 @@ internal static class CameraWidget
 		}
 
 		if (control is not null &&
-			controlsFinder?.Invoke(cameraId)?.Definition is { } definition)
+			controlsFinder?.Invoke(cameraId) is not null)
 		{
-			children.Add(ArrowPad(definition, controlsOpacity, control, $"c{index}"));
+			children.Add(ArrowPad(cameraId, controlsOpacity, control, $"c{index}"));
 		}
 
 		if (children.Count == 1)
@@ -352,7 +352,7 @@ internal static class CameraWidget
 	}
 
 	internal static UiStack ArrowPad(
-		CameraDefinition camera,
+		string cameraId,
 		double opacity,
 		CameraControlHandler control,
 		string keyPrefix)
@@ -367,7 +367,7 @@ internal static class CameraWidget
 				ArrowRow(
 					keyPrefix + "-top",
 					UiComponentJustify.Center,
-					Arrow(keyPrefix + "-up", "\u25B2", camera, CameraControlOperation.MoveUp, opacity, control)),
+					Arrow(keyPrefix + "-up", "\u25B2", cameraId, CameraControlOperation.MoveUp, opacity, control)),
 				new UiStack
 				{
 					Key = keyPrefix + "-middle",
@@ -378,14 +378,14 @@ internal static class CameraWidget
 					Padding = 0.02,
 					Children =
 					[
-						Arrow(keyPrefix + "-left", "\u25C0", camera, CameraControlOperation.MoveLeft, opacity, control),
-						Arrow(keyPrefix + "-right", "\u25B6", camera, CameraControlOperation.MoveRight, opacity, control)
+						Arrow(keyPrefix + "-left", "\u25C0", cameraId, CameraControlOperation.MoveLeft, opacity, control),
+						Arrow(keyPrefix + "-right", "\u25B6", cameraId, CameraControlOperation.MoveRight, opacity, control)
 					]
 				},
 				ArrowRow(
 					keyPrefix + "-bottom",
 					UiComponentJustify.Center,
-					Arrow(keyPrefix + "-down", "\u25BC", camera, CameraControlOperation.MoveDown, opacity, control))
+					Arrow(keyPrefix + "-down", "\u25BC", cameraId, CameraControlOperation.MoveDown, opacity, control))
 			]
 		};
 	}
@@ -406,7 +406,7 @@ internal static class CameraWidget
 	private static UiModifier Arrow(
 		string key,
 		string glyph,
-		CameraDefinition camera,
+		string cameraId,
 		CameraControlOperation operation,
 		double opacity,
 		CameraControlHandler control)
@@ -427,7 +427,7 @@ internal static class CameraWidget
 				[
 					UiEventHandler.OnAsync(
 						UiComponentEvents.Press,
-						cancellationToken => control(camera, operation, cancellationToken))
+						cancellationToken => control(cameraId, operation, cancellationToken))
 				],
 				Children =
 				[

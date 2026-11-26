@@ -230,7 +230,7 @@ internal static class CameraWallView
 				$"wall-cell-{index}-fallback")
 		};
 
-		if (control is null || findCamera?.Invoke(camera) is not { } definition)
+		if (control is null || findCamera?.Invoke(camera) is null)
 		{
 			return video;
 		}
@@ -243,7 +243,7 @@ internal static class CameraWallView
 			[
 				video,
 				CameraWidget.ArrowPad(
-					definition,
+					camera!,
 					controlsOpacity,
 					control,
 					$"w{index}")

@@ -198,13 +198,7 @@ internal sealed class PluginIntegration : IPluginIntegration,
 					configuration,
 					_providerQualifiedId,
 					id => _registry.Find(id)?.Definition,
-					(camera, operation, cancellationToken) => CameraControl.ExecuteAsync(
-						camera,
-						operation,
-						_onvifClient,
-						_miioClient,
-						_logger,
-						cancellationToken)));
+					ControlCameraAsync));
 		}
 
 		if (surface.Kind == UiSurfaceKinds.Config &&
@@ -252,13 +246,7 @@ internal sealed class PluginIntegration : IPluginIntegration,
 				surface,
 				providerId,
 				_registry.Find,
-				(camera, operation, cancellationToken) => CameraControl.ExecuteAsync(
-					camera,
-					operation,
-					_onvifClient,
-					_miioClient,
-					_logger,
-					cancellationToken));
+				ControlCameraAsync);
 			return new ViewSession(
 				new UiView(surface, view.Root),
 				view.Overlays.Count == 0
@@ -391,6 +379,28 @@ internal sealed class PluginIntegration : IPluginIntegration,
 			_provider = null;
 			_providerQualifiedId = null;
 		}
+	}
+
+	private Task<ActionResult> ControlCameraAsync(
+		string cameraId,
+		CameraControlOperation operation,
+		CancellationToken cancellationToken)
+	{
+		var camera = _registry.Find(cameraId)?.Definition;
+		if (camera is null)
+		{
+			return Task.FromResult(ActionResult.Failed(
+				ActionErrorCodes.NotConfigured,
+				Strings.Actions.Control.CameraMissing()));
+		}
+
+		return CameraControl.ExecuteAsync(
+			camera,
+			operation,
+			_onvifClient,
+			_miioClient,
+			_logger,
+			cancellationToken);
 	}
 
 	private static IUiSession Create(UiSurface surface, MacroDeck.Ui.Dsl.UiElement root)
