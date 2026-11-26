@@ -8,8 +8,8 @@ IP Camera
 
 ## Short description
 
-Live IP camera tiles for Macro Deck: snapshot, MJPEG, RTSP and ONVIF, including the Xiaomi Mi 360
-through go2rtc.
+Live camera tiles and camera walls for Macro Deck: snapshot, MJPEG, RTSP and ONVIF, including the Xiaomi
+Mi 360 through go2rtc.
 
 ## Long description
 
@@ -36,19 +36,35 @@ of a tile that never plays.
 
 **Made for a deck**
 
-- Fill the tile or fit the whole frame.
+- One camera per tile, a split with two, or four cameras in one tile.
+- A camera wall that fills a whole folder with one camera or up to four.
+- Fill the cell or fit the whole frame.
 - A label, background, label colour, font and border through Macro Deck's standard appearance settings.
+- A live dot and the age of the last frame, or a reconnecting state when the camera drops out.
 - A short press opens the same stream in Macro Deck's modal.
-- Your own Short Press action wins over the default.
-- When a camera drops out, the tile says the camera is offline and reconnecting, and the integration
-  page offers Retry.
+
+**Move the camera from the deck**
+
+- Left, right, up and down arrows on each camera cell, with a transparency slider.
+- The enlarged window keeps the arrows, so a PTZ camera stays controllable while you watch.
+- Move, Stop and Night vision actions for ONVIF cameras and the Xiaomi Mi 360.
+- Macro Deck gives a tile press either to the controls in its tree or to its Short Press flow, never
+  both. The arrows therefore disable the tile's Short Press flow. To run actions and keep the arrows,
+  create a Macro Deck script and pick it as the widget's Press script; the plugin runs that script with
+  the pressed widget and the pressing client.
+
+**When a camera drops out**
+
+The tile says the camera is offline and reconnecting, and the plugin reports an integration issue with
+a Retry action. The stream recovers on its own when the camera answers again.
 
 **Xiaomi Mi 360**
 
 The Mi 360 does not expose RTSP or ONVIF. go2rtc can hold its P2P session and serve a normal MJPEG
 stream; point this plugin at that stream. Each connection needs an Internet round trip so go2rtc can
-fetch Xiaomi's encryption key. The video itself stays on the LAN. See the repository README for the
-go2rtc configuration.
+fetch Xiaomi's encryption key. The video itself stays on the LAN. Movement and night vision use the
+local miIO channel with the device token from Mi Home. See the repository README for the go2rtc
+configuration.
 
 **Requirements**
 
@@ -59,16 +75,17 @@ go2rtc configuration.
 **Network and privacy**
 
 The plugin connects only to the camera URLs you configure, plus a local go2rtc if you use one. It does
-not send camera data to any other service. The video relay listens on 127.0.0.1. Camera passwords are
-stored in Macro Deck's encrypted secret store. RTSP passwords are passed to ffmpeg in its command line,
-because RTSP has no separate credential option.
+not send camera data to any other service. The video relay listens on 127.0.0.1. Camera passwords and
+the Xiaomi token are stored in Macro Deck's secret store. RTSP passwords are passed to ffmpeg in its
+command line, because RTSP has no separate credential option.
 
 ## Tags
 
-camera, ip camera, rtsp, mjpeg, onvif, xiaomi, go2rtc, security camera, live view, video
+camera, ip camera, rtsp, mjpeg, onvif, xiaomi, go2rtc, security camera, live view, video, ptz, camera
+wall
 
 ## Links
 
 - Repository: https://github.com/dominic25/ItaiMarom.IpCameraPlugin
-- Support: the repository issue tracker once it exists
+- Support: https://github.com/dominic25/ItaiMarom.IpCameraPlugin/issues
 - Store: https://macro-deck.app/store/com.itaimarom.ip-camera

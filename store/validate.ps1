@@ -6,8 +6,8 @@ $expected = @(
     "01-hero.png",
     "02-setup.png",
     "03-modal.png",
-    "04-integration.png",
-    "05-large-view.png"
+    "04-wall.png",
+    "05-four.png"
 )
 
 $failed = $false

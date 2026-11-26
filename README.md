@@ -24,8 +24,8 @@ camera picture is a local test stream.
 
 | | |
 | --- | --- |
-| ![The camera setup dialog with a stream URL and the connection check](store/02-setup.png) | ![A short press opens the camera in Macro Deck's modal](store/03-modal.png) |
-| ![The IP Camera integration page with three ready cameras](store/04-integration.png) | ![A camera filling a folder](store/05-large-view.png) |
+| ![The camera setup dialog with a stream URL and the connection check](store/02-setup.png) | ![A short press opens the camera in Macro Deck's modal with movement arrows](store/03-modal.png) |
+| ![A camera wall filling a Macro Deck folder](store/04-wall.png) | ![A split camera tile with movement arrows](store/05-four.png) |
 
 ## What it adds to Macro Deck
 
@@ -44,7 +44,7 @@ camera picture is a local test stream.
   snapshot address. Stream quality can be a Low, Balanced or High preset, or Custom with your own frame
   rate and maximum width.
 - **Offline feedback**: a camera that drops out shows "The camera is offline. Reconnecting." on its
-  widget, and the integration page offers a Retry action.
+  widget, and the plugin reports an integration issue with a Retry action.
 - **A Save snapshot action**: writes the pressed camera's current picture as a JPEG. The folder is set
   per action; empty means `Pictures\IP Camera`.
 - **A Show camera action**: opens a camera in the enlarged modal. It can name its camera, so a plain

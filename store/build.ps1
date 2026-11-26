@@ -43,7 +43,8 @@ foreach ($slide in $slides) {
 $compression = @{
     "01-hero" = 256
     "03-modal" = 256
-    "05-large-view" = 96
+    "04-wall" = 128
+    "05-four" = 128
 }
 $ffmpeg = (Get-Command ffmpeg -ErrorAction SilentlyContinue).Source
 if (-not $ffmpeg) {

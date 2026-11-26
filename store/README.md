@@ -5,11 +5,11 @@ the Store gallery renders them in.
 
 | File | Shows |
 | --- | --- |
-| `01-hero.png` | The deck with two camera widgets, one filling its tile and one fitting the whole frame, both with a label. |
+| `01-hero.png` | One camera filling a tile, with the live status and movement arrows. |
 | `02-setup.png` | The camera setup dialog with source type, stream URL and advanced options. |
-| `03-modal.png` | A short press opening the same stream in Macro Deck's modal. |
-| `04-integration.png` | The IP Camera integration page: ready cameras, actions, widget and video stream capabilities. |
-| `05-large-view.png` | A camera filling a folder, edge to edge. |
+| `03-modal.png` | The enlarged camera window, with the same movement arrows. |
+| `04-wall.png` | A camera wall filling a folder edge to edge. |
+| `05-four.png` | A split tile with two live camera cells, each with status and arrows. |
 
 ## Rebuilding
 
@@ -24,9 +24,8 @@ ffmpeg afterwards so each image stays under the 1 MB upload limit.
 
 ## Notes
 
-- Every piece of UI inside a screenshot panel is a real capture of Macro Deck 3.0.5 with the plugin
-  installed: the widget, the setup dialog, the modal and the integration page. The background, headline,
-  pills and the panel frame are presentation, not plugin UI.
+- Every piece of UI inside a screenshot panel is a real capture of Macro Deck's deck UI with the test
+  plugin installed. The background, headline, pills and panel frame are presentation, not plugin UI.
 - The camera pictures are stock photographs served from a local MJPEG test server. No real home,
   street, person or user camera appears in them.
 - The only generated asset in the package is the plugin icon, which the manifest declares.
