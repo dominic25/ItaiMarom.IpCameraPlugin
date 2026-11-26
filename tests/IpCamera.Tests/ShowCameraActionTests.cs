@@ -1,7 +1,10 @@
 using System.Text.Json;
 using IpCamera.Actions;
+using IpCamera.Cameras;
+using IpCamera.Streaming;
 using MacroDeck.Sdk.Actions;
 using MacroDeck.Sdk.Ui;
+using MacroDeck.Sdk.VideoStreams;
 using MacroDeck.Sdk.Widgets;
 using NUnit.Framework;
 using Serilog;
@@ -19,7 +22,7 @@ public sealed class ShowCameraActionTests
 		using var data = JsonDocument.Parse("""{"camera":"camera-1"}""");
 		var widgets = new StubWidgetApi(new WidgetDataSnapshot("widget-1", "com.itaimarom.ip-camera::camera", data.RootElement.Clone()));
 		var ui = new StubInteractions();
-		var executor = new ShowCameraAction(() => widgets, _logger).CreateExecutor();
+		var executor = new ShowCameraAction(() => widgets, EmptyRegistry(), _logger).CreateExecutor();
 
 		var result = await executor.ExecuteAsync(Context(ui));
 
@@ -34,7 +37,7 @@ public sealed class ShowCameraActionTests
 	{
 		using var data = JsonDocument.Parse("""{"camera":""}""");
 		var widgets = new StubWidgetApi(new WidgetDataSnapshot("widget-1", "com.itaimarom.ip-camera::camera", data.RootElement.Clone()));
-		var executor = new ShowCameraAction(() => widgets, _logger).CreateExecutor();
+		var executor = new ShowCameraAction(() => widgets, EmptyRegistry(), _logger).CreateExecutor();
 
 		var result = await executor.ExecuteAsync(Context(new StubInteractions()));
 
@@ -45,12 +48,43 @@ public sealed class ShowCameraActionTests
 	[Test]
 	public async Task A_run_without_a_widget_fails()
 	{
-		var executor = new ShowCameraAction(() => null, _logger).CreateExecutor();
+		var executor = new ShowCameraAction(() => null, EmptyRegistry(), _logger).CreateExecutor();
 
 		var result = await executor.ExecuteAsync(Context(new StubInteractions(), withOwnerWidget: false));
 
 		Assert.That(result.Status, Is.EqualTo(ActionResultStatus.Failed));
 		Assert.That(result.ErrorCode, Is.EqualTo(ActionErrorCodes.NotFound));
+	}
+
+	[Test]
+	public async Task A_chosen_camera_opens_without_a_widget()
+	{
+		var camera = new CameraDefinition(
+			"camera-1",
+			"Test camera",
+			CameraSourceKind.Mjpeg,
+			new Uri("http://127.0.0.1/camera.mjpeg"),
+			null,
+			null,
+			5,
+			640,
+			"tcp");
+
+		await using var registry = new CameraRegistry(_ => new StubStream(camera));
+		await registry.SetCamerasAsync([camera], CancellationToken.None);
+
+		var ui = new StubInteractions();
+		var context = Context(
+			ui,
+			withOwnerWidget: false,
+			parameters: new Dictionary<string, object> { ["camera"] = "camera-1" });
+
+		var executor = new ShowCameraAction(() => null, registry, _logger).CreateExecutor();
+		var result = await executor.ExecuteAsync(context);
+
+		Assert.That(result.Status, Is.EqualTo(ActionResultStatus.Succeeded));
+		Assert.That(ui.Modal, Is.Not.Null);
+		Assert.That(ui.Modal!.Data!["camera"].GetString(), Is.EqualTo("camera-1"));
 	}
 
 	[OneTimeTearDown]
@@ -59,11 +93,19 @@ public sealed class ShowCameraActionTests
 		(_logger as IDisposable)?.Dispose();
 	}
 
-	private static ActionExecutionContext Context(StubInteractions ui, bool withOwnerWidget = true)
+	private static CameraRegistry EmptyRegistry()
+	{
+		return new CameraRegistry(_ => throw new InvalidOperationException());
+	}
+
+	private static ActionExecutionContext Context(
+		StubInteractions ui,
+		bool withOwnerWidget = true,
+		IReadOnlyDictionary<string, object>? parameters = null)
 	{
 		return new ActionExecutionContext
 		{
-			Parameters = new Dictionary<string, object>(),
+			Parameters = parameters ?? new Dictionary<string, object>(),
 			OriginClientId = "client-1",
 			OwnerWidgetId = withOwnerWidget ? "widget-1" : null,
 			Ui = ui
@@ -114,6 +156,51 @@ public sealed class ShowCameraActionTests
 			CancellationToken cancellationToken = default)
 		{
 			return Task.FromResult(ModalResult.FromCancellation<T>());
+		}
+	}
+
+	private sealed class StubStream(CameraDefinition definition) : IFrameStream
+	{
+		public CameraDefinition Definition => definition;
+
+		public VideoStreamState State => VideoStreamState.Connected;
+
+		public bool HasFailed => false;
+
+		public DateTimeOffset? LastFrameAt => DateTimeOffset.UtcNow;
+
+		public int? Width => 640;
+
+		public int? Height => 360;
+
+		public byte[]? CurrentFrame => null;
+
+		public event EventHandler? StateChanged
+		{
+			add { }
+			remove { }
+		}
+
+		public FrameSubscription Subscribe()
+		{
+			return new FrameSubscription(
+				System.Threading.Channels.Channel.CreateBounded<byte[]>(1).Reader,
+				() => { });
+		}
+
+		public Task RestartAsync()
+		{
+			return Task.CompletedTask;
+		}
+
+		public Task<bool> PrimeAsync(TimeSpan timeout, CancellationToken cancellationToken)
+		{
+			return Task.FromResult(true);
+		}
+
+		public ValueTask DisposeAsync()
+		{
+			return ValueTask.CompletedTask;
 		}
 	}
 }

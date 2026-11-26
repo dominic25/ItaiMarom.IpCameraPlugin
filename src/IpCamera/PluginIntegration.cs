@@ -76,7 +76,7 @@ internal sealed class PluginIntegration : IPluginIntegration,
 		_logger = logger.ForContext<PluginIntegration>();
 		Actions =
 		[
-			new ShowCameraAction(() => _context?.Widgets, _logger),
+			new ShowCameraAction(() => _context?.Widgets, _registry, _logger),
 			new SaveSnapshotAction(() => _context?.Widgets, _registry, _logger),
 			.. CameraControlAction.Create(() => _context?.Widgets, _registry, _onvifClient, _miioClient, _logger)
 		];

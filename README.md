@@ -45,6 +45,8 @@ camera picture is a local test stream.
   widget, and the integration page offers a Retry action.
 - **A Save snapshot action**: writes the pressed camera's current picture as a JPEG. The folder is set
   per action; empty means `Pictures\IP Camera`.
+- **A Show camera action**: opens a camera in the enlarged modal. It can name its camera, so a plain
+  button opens a chosen one; left empty it opens the camera of the pressed widget.
 - **A camera wall folder view**: replace a folder's widget grid with one camera or up to four in a
   configurable wall. Pick it in the folder's settings; see [Camera wall](#camera-wall).
 - **Camera controls**: Move left, Move right, Move up, Move down and Stop actions for pan and tilt, plus

@@ -337,6 +337,9 @@
   <data name="Actions.ShowCamera.NoClient" xml:space="preserve">
     <value>There is no screen to open the camera on.</value>
   </data>
+  <data name="Actions.ShowCamera.CameraDescription" xml:space="preserve">
+    <value>The camera to open in the modal. Leave it on the pressed widget to open the camera of the camera tile that ran the action.</value>
+  </data>
   <data name="Actions.ShowCamera.NoWidget" xml:space="preserve">
     <value>This action has to run from a camera widget.</value>
   </data>
