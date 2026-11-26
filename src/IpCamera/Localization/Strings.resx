@@ -109,6 +109,12 @@
   <data name="Widgets.Camera.Config.ControlsOpacityDescription" xml:space="preserve">
     <value>0 hides the arrows completely, 100 keeps them solid.</value>
   </data>
+  <data name="Widgets.Camera.Config.OpenWindow" xml:space="preserve">
+    <value>Open the camera window</value>
+  </data>
+  <data name="Widgets.Camera.Config.OpenWindowDescription" xml:space="preserve">
+    <value>Open the camera in the enlarged window on a short press. Turn it off to let your own short-press action or flow receive the press.</value>
+  </data>
   <data name="Widgets.Camera.Overlay.Live" xml:space="preserve">
     <value>LIVE</value>
   </data>

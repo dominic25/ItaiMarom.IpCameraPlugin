@@ -38,6 +38,7 @@ internal static class CameraWidget
 	public const string OverlayBackgroundKey = "overlayBackground";
 	public const string ControlsKey = "controls";
 	public const string ControlsOpacityKey = "controlsOpacity";
+	public const string OpenWindowKey = "openWindow";
 	public const string LayoutKey = "layout";
 	public const string Camera2Key = "camera2";
 	public const string Camera3Key = "camera3";
@@ -64,6 +65,7 @@ internal static class CameraWidget
 		    "overlayBackground": { "type": "number" },
 		    "controls": { "type": "boolean" },
 		    "controlsOpacity": { "type": "number" },
+		    "openWindow": { "type": "boolean" },
 		    "flows": { "type": "array" },
 		    "backgroundColor": { "type": "string" },
 		    "label": { "type": "string" },
@@ -84,7 +86,7 @@ internal static class CameraWidget
 			TypeId,
 			Strings.Widgets.Camera.Name(),
 			Strings.Widgets.Camera.Description(),
-			DefaultData: $$"""{"{{CameraKey}}":"","{{FitKey}}":"{{FitCover}}","{{OverlayKey}}":true,"{{OverlayBackgroundKey}}":0,"{{ControlsKey}}":false,"{{ControlsOpacityKey}}":60,"{{LayoutKey}}":"{{LayoutSingle}}"}""",
+			DefaultData: $$"""{"{{CameraKey}}":"","{{FitKey}}":"{{FitCover}}","{{OverlayKey}}":true,"{{OverlayBackgroundKey}}":0,"{{ControlsKey}}":false,"{{ControlsOpacityKey}}":60,"{{OpenWindowKey}}":true,"{{LayoutKey}}":"{{LayoutSingle}}"}""",
 			DataSchema: DataSchema,
 			HasConfiguration: true)
 		{
@@ -134,6 +136,9 @@ internal static class CameraWidget
 		var openTargets = new Dictionary<string, string>(StringComparer.Ordinal);
 		var controlsEnabled = ReadBool(data, ControlsKey) && control is not null;
 		var controlsOpacity = Math.Clamp(ReadNumber(data, ControlsOpacityKey, 60), 0, 100) / 100.0;
+		var openWindow = data.ValueKind != JsonValueKind.Object ||
+			!data.TryGetProperty(OpenWindowKey, out var storedOpenWindow) ||
+			storedOpenWindow.ValueKind != JsonValueKind.False;
 
 		UiElement content;
 		CameraOverlay? overlay = null;
@@ -148,7 +153,7 @@ internal static class CameraWidget
 				fit,
 				findStream,
 				overlays,
-				openTargets,
+				openWindow ? openTargets : null,
 				controlsEnabled,
 				controlsOpacity,
 				control);
@@ -173,7 +178,10 @@ internal static class CameraWidget
 				overlays.Add(overlay);
 			}
 
-			openTargets["open-camera"] = cameraId;
+			if (openWindow)
+			{
+				openTargets["open-camera"] = cameraId;
+			}
 
 			if (controlsEnabled && findStream?.Invoke(cameraId) is not null)
 			{
@@ -242,7 +250,7 @@ internal static class CameraWidget
 		string fit,
 		Func<string, IFrameStream?>? findStream,
 		List<CameraOverlay> overlays,
-		Dictionary<string, string> openTargets,
+		Dictionary<string, string>? openTargets,
 		bool controlsEnabled,
 		double controlsOpacity,
 		CameraControlHandler? control)
@@ -324,7 +332,7 @@ internal static class CameraWidget
 		Func<string, IFrameStream?>? findStream,
 		double backgroundOpacity,
 		List<CameraOverlay> overlays,
-		Dictionary<string, string> openTargets,
+		Dictionary<string, string>? openTargets,
 		Func<string, IFrameStream?>? controlsFinder,
 		double controlsOpacity,
 		CameraControlHandler? control)
@@ -360,8 +368,11 @@ internal static class CameraWidget
 			children.Add(overlay.Build());
 		}
 
-		openTargets[$"open-camera-{index}"] = cameraId;
-		children.Add(OpenButton($"open-camera-{index}"));
+		if (openTargets is not null)
+		{
+			openTargets[$"open-camera-{index}"] = cameraId;
+			children.Add(OpenButton($"open-camera-{index}"));
+		}
 
 		if (control is not null &&
 			controlsFinder?.Invoke(cameraId) is not null)
@@ -538,6 +549,10 @@ internal static class CameraWidget
 		var controls = new UiState<bool>(ReadBool(data, ControlsKey));
 		var controlsOpacity = new UiState<double>(
 			Math.Clamp(ReadNumber(data, ControlsOpacityKey, 60), 0, 100));
+		var openWindow = new UiState<bool>(
+			data.ValueKind != JsonValueKind.Object ||
+			!data.TryGetProperty(OpenWindowKey, out var storedOpenWindow) ||
+			storedOpenWindow.ValueKind != JsonValueKind.False);
 		var flows = new UiState<JsonElement>(
 			data.ValueKind == JsonValueKind.Object &&
 			data.TryGetProperty("flows", out var stored) &&
@@ -649,6 +664,13 @@ internal static class CameraWidget
 						Step = 5,
 						ShowSlider = true,
 						Binding = Bind.To(controlsOpacity)
+					},
+					new UiBooleanInput
+					{
+						Key = OpenWindowKey,
+						Label = Strings.Widgets.Camera.Config.OpenWindow(),
+						Description = Strings.Widgets.Camera.Config.OpenWindowDescription(),
+						Binding = Bind.To(openWindow)
 					},
 					UiWidgetAppearance.Section(data, UiWidgetAppearanceFields.All)
 				]
