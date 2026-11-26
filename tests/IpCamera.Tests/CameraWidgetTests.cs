@@ -444,7 +444,7 @@ public sealed class CameraWidgetTests
 		{
 			Assert.That(ContainsId(view.Tree.Root, "controls"), Is.True);
 			Assert.That(ContainsId(view.Tree.Root, "controlsOpacity"), Is.True);
-			Assert.That(ContainsId(view.Tree.Root, CameraWidget.OpenWindowKey), Is.True);
+			Assert.That(ContainsId(view.Tree.Root, CameraWidget.PressScriptKey), Is.True);
 		});
 	}
 
@@ -558,61 +558,12 @@ public sealed class CameraWidgetTests
 	}
 
 	[Test]
-	public void The_camera_window_stays_closed_when_its_toggle_is_off()
-	{
-		var surface = Surface(new { camera = "camera-1", controls = true, openWindow = false });
-		var view = CameraWidget.BuildView(
-			surface,
-			ProviderId,
-			_ => Stream(),
-			(_, _, _) => Task.CompletedTask);
-
-		using var ui = new UiView(surface, view.Root);
-
-		Assert.Multiple(() =>
-		{
-			Assert.That(view.OpenTargets, Is.Empty);
-			Assert.That(ContainsId(ui.Tree.Root, "open-camera"), Is.False);
-			Assert.That(ContainsId(ui.Tree.Root, "arrows-left"), Is.False);
-		});
-	}
-
-	[Test]
-	public void A_grid_with_the_window_toggle_off_has_no_cell_buttons()
-	{
-		var surface = Surface(new
-		{
-			camera = "camera-1",
-			camera2 = "camera-2",
-			layout = CameraWidget.LayoutSplit,
-			controls = true,
-			openWindow = false
-		});
-		var view = CameraWidget.BuildView(
-			surface,
-			ProviderId,
-			_ => Stream(),
-			(_, _, _) => Task.CompletedTask);
-
-		using var ui = new UiView(surface, view.Root);
-
-		Assert.Multiple(() =>
-		{
-			Assert.That(view.OpenTargets, Is.Empty);
-			Assert.That(ContainsId(ui.Tree.Root, "open-camera-0"), Is.False);
-			Assert.That(ContainsId(ui.Tree.Root, "open-camera-1"), Is.False);
-			Assert.That(ContainsId(ui.Tree.Root, "c0-left"), Is.False);
-		});
-	}
-
-	[Test]
 	public void A_press_script_keeps_the_tile_arrows()
 	{
 		var surface = Surface(new
 		{
 			camera = "camera-1",
 			controls = true,
-			openWindow = false,
 			pressScript = "script-1"
 		});
 		var view = CameraWidget.BuildView(

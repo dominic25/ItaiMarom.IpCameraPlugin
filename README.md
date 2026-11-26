@@ -32,14 +32,10 @@ camera picture is a local test stream.
 - **A Camera widget**: one, two or four cameras on the same tile. Pick a camera per cell, choose whether
   the pictures fill their cell or fit inside it, and give the widget a label, background and colours. A
   short press on a picture opens that cell's camera in a modal as large as Macro Deck's fixed dialog box
-  allows. The **Open the camera window** setting controls that press: turn it off to let the widget's
-  Short Press and Long Press actions run. Macro Deck gives a press either to a tile's controls or to its
-  actions, so the tile arrows are hidden while the setting is off. To keep the arrows and still run
-  actions, choose a **Press script**: a Macro Deck script runs on the press, with the tile's widget and
-  client, while the arrows stay. Plugins can run scripts but cannot run another action or a tile flow.
-  The status overlay is available on every configured cell. With the window or a press script enabled,
-  each cell can also show optional left, right, up and down arrows with their own opacity, so a Xiaomi or
-  ONVIF camera can be moved from the deck.
+  allows. The status overlay is available on every configured cell. Each cell can also show optional
+  left, right, up and down arrows with their own opacity, so a Xiaomi or ONVIF camera can be moved from
+  the deck. The arrows make the tile claim presses, so Macro Deck skips the tile's Short Press flow;
+  choose a **Press script** to run actions while the arrows stay.
 - **A video stream provider**: every configured camera is listed under Source in any widget or action
   that can show a video stream, not only in this plugin's own widget.
 - **A camera setup flow**: one Macro Deck configuration entry per camera. The flow fetches one frame
@@ -67,6 +63,20 @@ camera picture is a local test stream.
   frame on the tile, or "RECONNECTING" when the source drops. New widgets enable it by default. It can
   be turned off in the widget settings, and a background opacity slider controls the dark strip behind
   it; 0 leaves only the dot and text over the picture.
+
+## Running actions from a camera tile
+
+Macro Deck gives a tile press either to the controls in its tree or to its Short Press flow, never both.
+The movement arrows are controls, so they disable the tile's press flows. To run actions with the arrows
+on:
+
+1. Create a script in Macro Deck with the actions you want.
+2. In the camera widget settings, set **Press script** to that script.
+3. Press the picture. The script runs with the pressed widget and client, and the arrows still move the
+   camera.
+
+**None** keeps the press opening the enlarged camera window. A script that needs inputs without defaults
+is not offered.
 
 ## Requirements
 

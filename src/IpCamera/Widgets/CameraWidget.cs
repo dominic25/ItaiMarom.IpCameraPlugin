@@ -39,7 +39,6 @@ internal static class CameraWidget
 	public const string OverlayBackgroundKey = "overlayBackground";
 	public const string ControlsKey = "controls";
 	public const string ControlsOpacityKey = "controlsOpacity";
-	public const string OpenWindowKey = "openWindow";
 	public const string PressScriptKey = "pressScript";
 	public const string LayoutKey = "layout";
 	public const string Camera2Key = "camera2";
@@ -67,7 +66,6 @@ internal static class CameraWidget
 		    "overlayBackground": { "type": "number" },
 		    "controls": { "type": "boolean" },
 		    "controlsOpacity": { "type": "number" },
-		    "openWindow": { "type": "boolean" },
 		    "pressScript": { "type": "string" },
 		    "flows": { "type": "array" },
 		    "backgroundColor": { "type": "string" },
@@ -89,7 +87,7 @@ internal static class CameraWidget
 			TypeId,
 			Strings.Widgets.Camera.Name(),
 			Strings.Widgets.Camera.Description(),
-			DefaultData: $$"""{"{{CameraKey}}":"","{{FitKey}}":"{{FitCover}}","{{OverlayKey}}":true,"{{OverlayBackgroundKey}}":0,"{{ControlsKey}}":false,"{{ControlsOpacityKey}}":60,"{{OpenWindowKey}}":true,"{{PressScriptKey}}":"","{{LayoutKey}}":"{{LayoutSingle}}"}""",
+			DefaultData: $$"""{"{{CameraKey}}":"","{{FitKey}}":"{{FitCover}}","{{OverlayKey}}":true,"{{OverlayBackgroundKey}}":0,"{{ControlsKey}}":false,"{{ControlsOpacityKey}}":60,"{{PressScriptKey}}":"","{{LayoutKey}}":"{{LayoutSingle}}"}""",
 			DataSchema: DataSchema,
 			HasConfiguration: true)
 		{
@@ -138,12 +136,8 @@ internal static class CameraWidget
 		var layout = ReadLayout(data);
 		var overlays = new List<CameraOverlay>();
 		var openTargets = new Dictionary<string, string>(StringComparer.Ordinal);
-		var openWindow = data.ValueKind != JsonValueKind.Object ||
-			!data.TryGetProperty(OpenWindowKey, out var storedOpenWindow) ||
-			storedOpenWindow.ValueKind != JsonValueKind.False;
 		var pressScript = ReadString(data, PressScriptKey);
-		var pressEnabled = openWindow || !string.IsNullOrEmpty(pressScript);
-		var controlsEnabled = ReadBool(data, ControlsKey) && control is not null && pressEnabled;
+		var controlsEnabled = ReadBool(data, ControlsKey) && control is not null;
 		var controlsOpacity = Math.Clamp(ReadNumber(data, ControlsOpacityKey, 60), 0, 100) / 100.0;
 
 		UiElement content;
@@ -159,7 +153,7 @@ internal static class CameraWidget
 				fit,
 				findStream,
 				overlays,
-				pressEnabled ? openTargets : null,
+				openTargets,
 				controlsEnabled,
 				controlsOpacity,
 				control);
@@ -184,10 +178,7 @@ internal static class CameraWidget
 				overlays.Add(overlay);
 			}
 
-			if (pressEnabled)
-			{
-				openTargets["open-camera"] = cameraId;
-			}
+			openTargets["open-camera"] = cameraId;
 
 			if (controlsEnabled && findStream?.Invoke(cameraId) is not null)
 			{
@@ -586,10 +577,6 @@ internal static class CameraWidget
 		var controls = new UiState<bool>(ReadBool(data, ControlsKey));
 		var controlsOpacity = new UiState<double>(
 			Math.Clamp(ReadNumber(data, ControlsOpacityKey, 60), 0, 100));
-		var openWindow = new UiState<bool>(
-			data.ValueKind != JsonValueKind.Object ||
-			!data.TryGetProperty(OpenWindowKey, out var storedOpenWindow) ||
-			storedOpenWindow.ValueKind != JsonValueKind.False);
 		var pressScript = new UiState<string>(ReadString(data, PressScriptKey) ?? string.Empty);
 		var scriptOptions = BuildScriptOptions(scripts);
 		var flows = new UiState<JsonElement>(
@@ -703,13 +690,6 @@ internal static class CameraWidget
 						Step = 5,
 						ShowSlider = true,
 						Binding = Bind.To(controlsOpacity)
-					},
-					new UiBooleanInput
-					{
-						Key = OpenWindowKey,
-						Label = Strings.Widgets.Camera.Config.OpenWindow(),
-						Description = Strings.Widgets.Camera.Config.OpenWindowDescription(),
-						Binding = Bind.To(openWindow)
 					},
 					new UiChoiceInput
 					{
