@@ -134,11 +134,11 @@ internal static class CameraWidget
 		var layout = ReadLayout(data);
 		var overlays = new List<CameraOverlay>();
 		var openTargets = new Dictionary<string, string>(StringComparer.Ordinal);
-		var controlsEnabled = ReadBool(data, ControlsKey) && control is not null;
-		var controlsOpacity = Math.Clamp(ReadNumber(data, ControlsOpacityKey, 60), 0, 100) / 100.0;
 		var openWindow = data.ValueKind != JsonValueKind.Object ||
 			!data.TryGetProperty(OpenWindowKey, out var storedOpenWindow) ||
 			storedOpenWindow.ValueKind != JsonValueKind.False;
+		var controlsEnabled = ReadBool(data, ControlsKey) && control is not null && openWindow;
+		var controlsOpacity = Math.Clamp(ReadNumber(data, ControlsOpacityKey, 60), 0, 100) / 100.0;
 
 		UiElement content;
 		CameraOverlay? overlay = null;

@@ -101,7 +101,7 @@
     <value>Movement arrows</value>
   </data>
   <data name="Widgets.Camera.Config.ControlsDescription" xml:space="preserve">
-    <value>Show left, right, up and down buttons for the camera on this cell. They move a Xiaomi or ONVIF camera without leaving the deck.</value>
+    <value>Show left, right, up and down buttons for the camera on this cell. They move a Xiaomi or ONVIF camera without leaving the deck. The tile hides them while Open the camera window is off, because Macro Deck gives a press either to the tile controls or to the tile actions.</value>
   </data>
   <data name="Widgets.Camera.Config.ControlsOpacity" xml:space="preserve">
     <value>Arrow transparency</value>
@@ -113,7 +113,7 @@
     <value>Open the camera window</value>
   </data>
   <data name="Widgets.Camera.Config.OpenWindowDescription" xml:space="preserve">
-    <value>Open the camera in the enlarged window on a short press. Turn it off to let your own short-press action or flow receive the press.</value>
+    <value>Open the camera in the enlarged window on a short press. Turn it off to let the Short Press and Long Press actions below run. The tile arrows are hidden then, because a press goes either to the tile controls or to the tile actions; the enlarged window keeps its arrows.</value>
   </data>
   <data name="Widgets.Camera.Overlay.Live" xml:space="preserve">
     <value>LIVE</value>
