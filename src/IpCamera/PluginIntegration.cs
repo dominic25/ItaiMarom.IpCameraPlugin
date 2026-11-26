@@ -192,7 +192,19 @@ internal sealed class PluginIntegration : IPluginIntegration,
 				UiFolderSurfaceAttributes.Configuration,
 				out var stored) ? stored : default;
 
-			return Create(surface, CameraWallView.Build(configuration, _providerQualifiedId));
+			return Create(
+				surface,
+				CameraWallView.Build(
+					configuration,
+					_providerQualifiedId,
+					id => _registry.Find(id)?.Definition,
+					(camera, operation, cancellationToken) => CameraControl.ExecuteAsync(
+						camera,
+						operation,
+						_onvifClient,
+						_miioClient,
+						_logger,
+						cancellationToken)));
 		}
 
 		if (surface.Kind == UiSurfaceKinds.Config &&

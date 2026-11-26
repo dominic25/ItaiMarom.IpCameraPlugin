@@ -1,4 +1,5 @@
 using System.Text.Json;
+using IpCamera.Cameras;
 using MacroDeck.Localization;
 using MacroDeck.Ui.Components;
 using MacroDeck.Ui.Config;
@@ -16,7 +17,11 @@ internal static class CameraWallView
 
 	private static readonly string[] _cameraKeys = ["camera1", "camera2", "camera3", "camera4"];
 
-	public static UiStack Build(JsonElement configuration, string? providerId)
+	public static UiStack Build(
+		JsonElement configuration,
+		string? providerId,
+		Func<string, CameraDefinition?>? findCamera = null,
+		CameraControlHandler? control = null)
 	{
 		configuration = Normalize(configuration);
 
@@ -32,9 +37,21 @@ internal static class CameraWallView
 
 		var columns = ReadString(configuration, ColumnsKey) == "2" ? 2 : 1;
 		var fit = ReadString(configuration, FitKey) == "contain" ? "contain" : "cover";
+		var controlsEnabled = ReadBool(configuration, CameraWidget.ControlsKey) &&
+			findCamera is not null &&
+			control is not null;
+		var controlsOpacity =
+			Math.Clamp(ReadNumber(configuration, CameraWidget.ControlsOpacityKey, 60), 0, 100) / 100.0;
 
 		var cells = cameras
-			.Select((camera, index) => Cell(camera, providerId, fit, index))
+			.Select((camera, index) => Cell(
+				camera,
+				providerId,
+				fit,
+				index,
+				controlsEnabled ? findCamera : null,
+				controlsOpacity,
+				control))
 			.ToList();
 
 		if (columns == 1)
@@ -90,6 +107,9 @@ internal static class CameraWallView
 		var camera4 = new UiState<string>(ReadString(configuration, "camera4") ?? string.Empty);
 		var columns = new UiState<string>(ReadString(configuration, ColumnsKey) == "2" ? "2" : "1");
 		var fit = new UiState<string>(ReadString(configuration, FitKey) == "contain" ? "contain" : "cover");
+		var controls = new UiState<bool>(ReadBool(configuration, CameraWidget.ControlsKey));
+		var controlsOpacity = new UiState<double>(
+			Math.Clamp(ReadNumber(configuration, CameraWidget.ControlsOpacityKey, 60), 0, 100));
 
 		return new UiStack
 		{
@@ -144,6 +164,24 @@ internal static class CameraWallView
 						new() { Value = "contain", Label = Strings.Widgets.Camera.Config.FitContain() }
 					]),
 					Binding = Bind.To(fit)
+				},
+				new UiBooleanInput
+				{
+					Key = CameraWidget.ControlsKey,
+					Label = Strings.Widgets.Camera.Config.Controls(),
+					Description = Strings.Widgets.Camera.Config.ControlsDescription(),
+					Binding = Bind.To(controls)
+				},
+				new UiNumberInput
+				{
+					Key = CameraWidget.ControlsOpacityKey,
+					Label = Strings.Widgets.Camera.Config.ControlsOpacity(),
+					Description = Strings.Widgets.Camera.Config.ControlsOpacityDescription(),
+					Min = 0,
+					Max = 100,
+					Step = 5,
+					ShowSlider = true,
+					Binding = Bind.To(controlsOpacity)
 				}
 			]
 		};
@@ -161,7 +199,14 @@ internal static class CameraWallView
 		};
 	}
 
-	private static UiElement Cell(string? camera, string providerId, string fit, int index)
+	private static UiElement Cell(
+		string? camera,
+		string providerId,
+		string fit,
+		int index,
+		Func<string, CameraDefinition?>? findCamera,
+		double controlsOpacity,
+		CameraControlHandler? control)
 	{
 		if (string.IsNullOrEmpty(camera))
 		{
@@ -170,7 +215,7 @@ internal static class CameraWallView
 				$"wall-cell-{index}-empty");
 		}
 
-		return new UiVideoStream
+		var video = new UiVideoStream
 		{
 			Key = $"wall-cell-{index}",
 			Stream = UiValue.Of(new MacroDeck.Ui.Model.References.UiVideoStreamReference
@@ -183,6 +228,26 @@ internal static class CameraWallView
 			Fallback = Placeholder(
 				Strings.Widgets.Camera.UpdateRequired(),
 				$"wall-cell-{index}-fallback")
+		};
+
+		if (control is null || findCamera?.Invoke(camera) is not { } definition)
+		{
+			return video;
+		}
+
+		return new UiLayer
+		{
+			Key = $"wall-cell-{index}-layer",
+			Fill = true,
+			Children =
+			[
+				video,
+				CameraWidget.ArrowPad(
+					definition,
+					controlsOpacity,
+					control,
+					$"w{index}")
+			]
 		};
 	}
 
@@ -231,6 +296,23 @@ internal static class CameraWallView
 		}
 
 		return configuration;
+	}
+
+	private static bool ReadBool(JsonElement data, string key)
+	{
+		return data.ValueKind == JsonValueKind.Object &&
+			data.TryGetProperty(key, out var value) &&
+			value.ValueKind == JsonValueKind.True;
+	}
+
+	private static double ReadNumber(JsonElement data, string key, double fallback)
+	{
+		return data.ValueKind == JsonValueKind.Object &&
+			data.TryGetProperty(key, out var value) &&
+			value.ValueKind == JsonValueKind.Number &&
+			value.TryGetDouble(out var number)
+				? number
+				: fallback;
 	}
 
 	private static string? ReadString(JsonElement data, string key)

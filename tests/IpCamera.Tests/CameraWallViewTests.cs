@@ -1,4 +1,5 @@
 using System.Text.Json;
+using IpCamera.Cameras;
 using IpCamera.Widgets;
 using MacroDeck.Ui.Model.Nodes;
 using MacroDeck.Ui.Model.Surfaces;
@@ -122,6 +123,76 @@ public sealed class CameraWallViewTests
 			Assert.That(ContainsId(view.Tree.Root, "columns"), Is.True);
 			Assert.That(ContainsId(view.Tree.Root, "fit"), Is.True);
 		});
+	}
+
+	[Test]
+	public void The_wall_draws_movement_arrows_on_each_cell_when_enabled()
+	{
+		var config = JsonSerializer.SerializeToElement(new
+		{
+			camera1 = "camera-1",
+			camera2 = "camera-2",
+			columns = "2",
+			controls = true,
+			controlsOpacity = 40
+		});
+		var camera = Camera();
+
+		var view = CameraWallView.Build(
+			config,
+			ProviderId,
+			_ => camera,
+			(_, _, _) => Task.CompletedTask);
+		using var ui = new UiView(Surface(), view);
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(ContainsId(ui.Tree.Root, "w0-left"), Is.True);
+			Assert.That(ContainsId(ui.Tree.Root, "w1-right"), Is.True);
+		});
+	}
+
+	[Test]
+	public void The_wall_has_no_arrows_by_default()
+	{
+		var config = JsonSerializer.SerializeToElement(new { camera1 = "camera-1" });
+
+		var view = CameraWallView.Build(
+			config,
+			ProviderId,
+			_ => Camera(),
+			(_, _, _) => Task.CompletedTask);
+		using var ui = new UiView(Surface(), view);
+
+		Assert.That(ContainsId(ui.Tree.Root, "w0-left"), Is.False);
+	}
+
+	[Test]
+	public void The_folder_configuration_offers_arrows_and_their_opacity()
+	{
+		var config = JsonSerializer.SerializeToElement(new { camera1 = "camera-1" });
+
+		using var view = new UiView(ConfigSurface(), CameraWallView.BuildConfiguration(config));
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(ContainsId(view.Tree.Root, "controls"), Is.True);
+			Assert.That(ContainsId(view.Tree.Root, "controlsOpacity"), Is.True);
+		});
+	}
+
+	private static CameraDefinition Camera()
+	{
+		return new CameraDefinition(
+			"camera-1",
+			"Test camera",
+			CameraSourceKind.Mjpeg,
+			new Uri("http://127.0.0.1/camera.mjpeg"),
+			null,
+			null,
+			5,
+			640,
+			"tcp");
 	}
 
 	private static UiSurface Surface()

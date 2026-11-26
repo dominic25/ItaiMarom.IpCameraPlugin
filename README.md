@@ -139,6 +139,10 @@ A single camera always fills the folder, which is the quickest way to give one c
 wall has no widgets of its own, so pressing a camera does not open the modal and there is nothing to
 configure per cell; it is a display.
 
+Each cell can also show the same movement arrows as the camera widget. Enable **Movement arrows** in the
+wall's Configuration and set **Arrow transparency**; every configured cell then draws left, right, up and
+down buttons for its own camera. The arrows use the camera's ONVIF or Xiaomi control settings.
+
 The folder's widgets are not deleted when you switch views. While the wall is active they are hidden,
 and switching back to **Widget Grid** in the same menu brings them back. The wall uses the plugin's video
 stream provider, so one producer per camera is still shared by every cell that shows that camera. An empty

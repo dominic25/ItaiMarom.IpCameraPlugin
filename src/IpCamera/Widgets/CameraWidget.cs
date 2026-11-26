@@ -351,7 +351,7 @@ internal static class CameraWidget
 		};
 	}
 
-	private static UiStack ArrowPad(
+	internal static UiStack ArrowPad(
 		CameraDefinition camera,
 		double opacity,
 		CameraControlHandler control,
