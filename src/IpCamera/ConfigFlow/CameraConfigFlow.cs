@@ -213,6 +213,8 @@ internal sealed class CameraConfigFlow(
 			transport);
 
 		// An edit with an untouched secret cannot be probed: the flow sees the mask, not the password.
+		int? probedWidth = null;
+		int? probedHeight = null;
 		if (string.IsNullOrEmpty(candidate.Username) || !string.IsNullOrEmpty(candidate.Password))
 		{
 			var probeResult = await probe.ProbeAsync(candidate, cancellationToken).ConfigureAwait(false);
@@ -220,6 +222,9 @@ internal sealed class CameraConfigFlow(
 			{
 				return FieldError(CameraSettings.UrlKey, ProbeMessage(probeResult.Failure));
 			}
+
+			probedWidth = probeResult.Width;
+			probedHeight = probeResult.Height;
 		}
 
 		if (control == "xiaomi" && !string.IsNullOrEmpty(controlToken))
@@ -253,6 +258,14 @@ internal sealed class CameraConfigFlow(
 		if (!string.IsNullOrEmpty(password))
 		{
 			values[CameraSettings.PasswordKey] = ConfigFlowValue.Secret(password);
+		}
+
+		if (probedWidth is > 0 && probedHeight is > 0)
+		{
+			values[CameraSettings.StreamWidthKey] = ConfigFlowValue.Plain(
+				probedWidth.Value.ToString(CultureInfo.InvariantCulture));
+			values[CameraSettings.StreamHeightKey] = ConfigFlowValue.Plain(
+				probedHeight.Value.ToString(CultureInfo.InvariantCulture));
 		}
 
 		if (!string.IsNullOrEmpty(controlToken))

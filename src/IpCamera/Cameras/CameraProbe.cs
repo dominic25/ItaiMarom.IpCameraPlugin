@@ -18,6 +18,11 @@ internal sealed record CameraProbeResult(CameraProbeFailure Failure)
 {
 	public static readonly CameraProbeResult Success = new(CameraProbeFailure.None);
 
+	/// <summary>The size of the frame the probe read, when it read one.</summary>
+	public int? Width { get; init; }
+
+	public int? Height { get; init; }
+
 	public bool Succeeded => Failure == CameraProbeFailure.None;
 }
 
@@ -88,9 +93,14 @@ internal sealed class CameraProbe(
 
 			await foreach (var frame in JpegFrameReader.ReadAsync(stream, deadline.Token).ConfigureAwait(false))
 			{
-				return JpegInfo.IsJpeg(frame)
-					? CameraProbeResult.Success
-					: new CameraProbeResult(CameraProbeFailure.NotJpeg);
+				if (!JpegInfo.IsJpeg(frame))
+				{
+					return new CameraProbeResult(CameraProbeFailure.NotJpeg);
+				}
+
+				return JpegInfo.TryReadSize(frame, out var width, out var height)
+					? new CameraProbeResult(CameraProbeFailure.None) { Width = width, Height = height }
+					: CameraProbeResult.Success;
 			}
 
 			return new CameraProbeResult(CameraProbeFailure.NoFrame);

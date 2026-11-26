@@ -39,7 +39,12 @@ public sealed class CameraProbeTests
 
 		var result = await Probe(handler).ProbeAsync(Camera(), CancellationToken.None);
 
-		Assert.That(result.Succeeded, Is.True);
+		Assert.Multiple(() =>
+		{
+			Assert.That(result.Succeeded, Is.True);
+			Assert.That(result.Width, Is.EqualTo(640));
+			Assert.That(result.Height, Is.EqualTo(360));
+		});
 	}
 
 	[Test]

@@ -48,6 +48,14 @@ internal sealed record CameraDefinition(
 	/// <summary>The Xiaomi device token. Never log it, never write it to a widget.</summary>
 	public string? ControlToken { get; init; }
 
+	/// <summary>
+	/// The frame size the setup probe saw. The video stream provider reports it before the first live
+	/// frame so a client can reserve the picture's aspect ratio instead of stretching into the box.
+	/// </summary>
+	public int? StreamWidth { get; init; }
+
+	public int? StreamHeight { get; init; }
+
 	// Record ToString would otherwise put the RTSP password into a log or an exception.
 	public override string ToString() => $"{Name} ({Kind})";
 
@@ -103,8 +111,16 @@ internal sealed record CameraDefinition(
 		{
 			Control = control,
 			ControlHost = NullIfEmpty(Read(values, CameraSettings.ControlHostKey)),
-			ControlToken = NullIfEmpty(controlToken)
+			ControlToken = NullIfEmpty(controlToken),
+			StreamWidth = ReadDimension(values, CameraSettings.StreamWidthKey),
+			StreamHeight = ReadDimension(values, CameraSettings.StreamHeightKey)
 		};
+	}
+
+	private static int? ReadDimension(IReadOnlyDictionary<string, string?> values, string key)
+	{
+		var value = ReadInt(values, key, 0, 1, 16384);
+		return value > 0 ? value : null;
 	}
 
 	private static int ApplyQuality(string? quality, int custom)
@@ -192,6 +208,8 @@ internal static class CameraSettings
 	public const string PasswordKey = "password";
 	public const string FpsKey = "fps";
 	public const string MaxWidthKey = "maxWidth";
+	public const string StreamWidthKey = "streamWidth";
+	public const string StreamHeightKey = "streamHeight";
 	public const string RtspTransportKey = "rtspTransport";
 	public const string QualityKey = "quality";
 	public const string ControlKey = "control";

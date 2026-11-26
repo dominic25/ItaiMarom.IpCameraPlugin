@@ -306,7 +306,12 @@ public sealed class CameraWidgetTests
 
 		using var view = new UiView(surface, CameraWidget.BuildModal(surface, ProviderId));
 
-		Assert.That(view.Tree.Root.Type, Is.EqualTo("ui.stack"));
+		Assert.Multiple(() =>
+		{
+			Assert.That(view.Tree.Root.Type, Is.EqualTo("ui.stack"));
+			Assert.That(view.Tree.Root.Children, Has.Count.EqualTo(1));
+			Assert.That(Contains(view.Tree.Root, "ui.layer"), Is.True);
+		});
 	}
 
 	[Test]

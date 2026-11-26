@@ -57,6 +57,26 @@ public sealed class CameraStreamProviderTests
 	}
 
 	[Test]
+	public async Task The_setup_frame_size_is_reported_before_the_first_live_frame()
+	{
+		var camera = Camera("one") with { StreamWidth = 1920, StreamHeight = 1080 };
+		await using var registry = await RegistryAsync(camera);
+		await using var provider = new CameraStreamProvider(
+			registry,
+			new StubEndpoint(),
+			new FakeVideoStreamProviderContext(),
+			_logger);
+
+		var stream = (await provider.GetStreamsAsync(CancellationToken.None)).Single();
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(stream.Width, Is.EqualTo(1920));
+			Assert.That(stream.Height, Is.EqualTo(1080));
+		});
+	}
+
+	[Test]
 	public async Task An_idle_camera_is_still_reported_as_openable()
 	{
 		// Macro Deck's readers do not open a stream reported as Disconnected or Unavailable, and the

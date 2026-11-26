@@ -62,8 +62,8 @@ internal sealed class CameraStreamProvider : IVideoStreamProvider, IAsyncDisposa
 					camera.Id,
 					LocalizedText.FromLiteral(camera.Name),
 					Description(camera.Kind),
-					stream?.Width,
-					stream?.Height,
+					stream?.Width ?? camera.StreamWidth,
+					stream?.Height ?? camera.StreamHeight,
 					HasAudio: false,
 					State: ReportState(stream?.State ?? VideoStreamState.Disconnected));
 			})

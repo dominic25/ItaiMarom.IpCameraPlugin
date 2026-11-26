@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using IpCamera.Actions;
 using IpCamera.Cameras;
@@ -14,6 +15,7 @@ using MacroDeck.Sdk.ConfigFlow;
 using MacroDeck.Sdk.FolderViews;
 using MacroDeck.Sdk.Issues;
 using MacroDeck.Sdk.Scripts;
+using MacroDeck.Sdk.Storage;
 using MacroDeck.Sdk.Ui;
 using MacroDeck.Sdk.VideoStreams;
 using MacroDeck.Sdk.Widgets;
@@ -38,6 +40,9 @@ internal sealed class PluginIntegration : IPluginIntegration,
 {
 	private const string FfmpegIssueId = "ffmpeg-missing";
 	private const string CameraIssuePrefix = "camera-offline-";
+	private const string StreamSizePrefix = "stream-size:";
+
+	private readonly ConcurrentDictionary<string, (int Width, int Height)> _streamSizes = new(StringComparer.Ordinal);
 
 	private readonly ILogger _logger;
 	private readonly CameraRegistry _registry;
@@ -126,7 +131,10 @@ internal sealed class PluginIntegration : IPluginIntegration,
 	public async Task InitializeAsync(IIntegrationContext context)
 	{
 		_context = context;
+		_registry.StreamChanged -= OnStreamSizeChanged;
+		_registry.StreamChanged += OnStreamSizeChanged;
 		var cameras = await ReadCamerasAsync(context).ConfigureAwait(false);
+		cameras = await WithStoredSizesAsync(context, cameras).ConfigureAwait(false);
 		await _registry.SetCamerasAsync(cameras, CancellationToken.None).ConfigureAwait(false);
 		await _server.StartAsync(CancellationToken.None).ConfigureAwait(false);
 
@@ -383,6 +391,7 @@ internal sealed class PluginIntegration : IPluginIntegration,
 
 	public async Task ShutdownAsync()
 	{
+		_registry.StreamChanged -= OnStreamSizeChanged;
 		_providerReady.TrySetResult(null);
 
 		if (_folderViewContext is not null)
@@ -407,6 +416,101 @@ internal sealed class PluginIntegration : IPluginIntegration,
 			await _provider.DisposeAsync().ConfigureAwait(false);
 			_provider = null;
 			_providerQualifiedId = null;
+		}
+	}
+
+	private async Task<IReadOnlyList<CameraDefinition>> WithStoredSizesAsync(
+		IIntegrationContext context,
+		IReadOnlyList<CameraDefinition> cameras)
+	{
+		var result = new List<CameraDefinition>(cameras.Count);
+		foreach (var camera in cameras)
+		{
+			if (camera.StreamWidth is > 0 && camera.StreamHeight is > 0)
+			{
+				_streamSizes[camera.Id] = (camera.StreamWidth.Value, camera.StreamHeight.Value);
+				result.Add(camera);
+				continue;
+			}
+
+			if (await TryReadStoredSizeAsync(context, camera.Id).ConfigureAwait(false) is { } size)
+			{
+				_streamSizes[camera.Id] = size;
+				result.Add(camera with { StreamWidth = size.Width, StreamHeight = size.Height });
+			}
+			else
+			{
+				result.Add(camera);
+			}
+		}
+
+		return result;
+	}
+
+	private static async Task<(int Width, int Height)?> TryReadStoredSizeAsync(
+		IIntegrationContext context,
+		string cameraId)
+	{
+		try
+		{
+			var read = await context.Storage
+				.ReadAsync(StreamSizePrefix + cameraId, _ => true, CancellationToken.None)
+				.ConfigureAwait(false);
+			if (read.Status != IntegrationStorageReadStatus.Found || read.Content is not { } content)
+			{
+				return null;
+			}
+
+			var parts = content.Split('x');
+			return parts.Length == 2 &&
+				int.TryParse(parts[0], out var width) && width > 0 &&
+				int.TryParse(parts[1], out var height) && height > 0
+					? (width, height)
+					: null;
+		}
+		catch (Exception)
+		{
+			return null;
+		}
+	}
+
+	private void OnStreamSizeChanged(IFrameStream stream)
+	{
+		if (stream.Width is not > 0 || stream.Height is not > 0)
+		{
+			return;
+		}
+
+		var size = (stream.Width.Value, stream.Height.Value);
+		if (_streamSizes.TryGetValue(stream.Definition.Id, out var known) && known == size)
+		{
+			return;
+		}
+
+		_streamSizes[stream.Definition.Id] = size;
+		_ = SaveStreamSizeAsync(stream.Definition.Id, size);
+	}
+
+	private async Task SaveStreamSizeAsync(string cameraId, (int Width, int Height) size)
+	{
+		var storage = _context?.Storage;
+		if (storage is null)
+		{
+			return;
+		}
+
+		try
+		{
+			await storage
+				.WriteAsync(
+					StreamSizePrefix + cameraId,
+					$"{size.Width}x{size.Height}",
+					CancellationToken.None)
+				.ConfigureAwait(false);
+		}
+		catch (Exception exception) when (exception is not OperationCanceledException)
+		{
+			_logger.Debug("Could not remember a stream size: {Reason}", exception.Message);
 		}
 	}
 

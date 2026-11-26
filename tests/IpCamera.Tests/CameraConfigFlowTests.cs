@@ -22,6 +22,30 @@ public sealed class CameraConfigFlowTests
 	}
 
 	[Test]
+	public async Task The_probe_frame_size_is_saved_with_the_camera()
+	{
+		var flow = CreateFlow(
+			probeResult: CameraProbeResult.Success with { Width = 1280, Height = 720 });
+
+		var result = await flow.SubmitAsync(
+			"camera",
+			Input(
+				("name", "Front door"),
+				("kind", "snapshot"),
+				("url", "http://192.168.1.20/snapshot.jpg"),
+				("fps", 6d)),
+			new StubFlowContext(),
+			CancellationToken.None);
+
+		Assert.That(result.Kind, Is.EqualTo(ConfigFlowResultKind.Complete));
+		Assert.Multiple(() =>
+		{
+			Assert.That(result.Values![CameraSettings.StreamWidthKey].Value, Is.EqualTo("1280"));
+			Assert.That(result.Values![CameraSettings.StreamHeightKey].Value, Is.EqualTo("720"));
+		});
+	}
+
+	[Test]
 	public async Task A_complete_snapshot_camera_is_saved_as_one_entry()
 	{
 		var flow = CreateFlow();

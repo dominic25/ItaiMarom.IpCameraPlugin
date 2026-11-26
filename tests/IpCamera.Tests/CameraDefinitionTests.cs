@@ -33,6 +33,28 @@ public sealed class CameraDefinitionTests
 	}
 
 	[Test]
+	public void The_setup_frame_size_is_kept_for_the_stream_catalog()
+	{
+		var camera = CameraDefinition.TryCreate(
+			_entryId,
+			"Front door",
+			Values(
+				(CameraSettings.KindKey, "snapshot"),
+				(CameraSettings.UrlKey, "http://192.168.1.20/snapshot.jpg"),
+				(CameraSettings.StreamWidthKey, "1920"),
+				(CameraSettings.StreamHeightKey, "1080")),
+			null,
+			out var error);
+
+		Assert.That(camera, Is.Not.Null, error);
+		Assert.Multiple(() =>
+		{
+			Assert.That(camera!.StreamWidth, Is.EqualTo(1920));
+			Assert.That(camera.StreamHeight, Is.EqualTo(1080));
+		});
+	}
+
+	[Test]
 	public void An_rtsp_camera_keeps_its_transport_and_clamps_the_frame_rate()
 	{
 		var camera = CameraDefinition.TryCreate(

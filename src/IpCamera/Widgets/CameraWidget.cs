@@ -533,7 +533,15 @@ internal static class CameraWidget
 			Key = "modal",
 			Fill = true,
 			Background = UiValue.Of("#000000"),
-			Children = children
+			Children =
+			[
+				new UiLayer
+				{
+					Key = "modal-layer",
+					Fill = true,
+					Children = children
+				}
+			]
 		};
 	}
 
