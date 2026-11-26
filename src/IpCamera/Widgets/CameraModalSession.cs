@@ -23,12 +23,14 @@ internal sealed class CameraModalSession : IUiSession, IAsyncDisposable
 	public CameraModalSession(
 		UiView view,
 		IReadOnlyDictionary<string, string> openTargets,
+		bool controls = true,
+		double controlsOpacity = 0.6,
 		Action? update = null)
 	{
 		_inner = new ViewSession(view, update);
 		_modals = openTargets.ToDictionary(
 			pair => pair.Key,
-			pair => CreateModal(pair.Value),
+			pair => CreateModal(pair.Value, controls, controlsOpacity),
 			StringComparer.Ordinal);
 	}
 
@@ -81,7 +83,10 @@ internal sealed class CameraModalSession : IUiSession, IAsyncDisposable
 		return _inner.DisposeAsync();
 	}
 
-	private static ModalDefinition CreateModal(string cameraId)
+	private static ModalDefinition CreateModal(
+		string cameraId,
+		bool controls,
+		double controlsOpacity)
 	{
 		return new ModalDefinition
 		{
@@ -89,7 +94,10 @@ internal sealed class CameraModalSession : IUiSession, IAsyncDisposable
 			Title = Strings.Actions.ShowCamera.ModalTitle(),
 			Data = new Dictionary<string, JsonElement>(StringComparer.Ordinal)
 			{
-				[CameraWidget.CameraKey] = JsonSerializer.SerializeToElement(cameraId)
+				[CameraWidget.CameraKey] = JsonSerializer.SerializeToElement(cameraId),
+				[CameraWidget.ControlsKey] = JsonSerializer.SerializeToElement(controls),
+				[CameraWidget.ControlsOpacityKey] =
+					JsonSerializer.SerializeToElement(Math.Clamp(controlsOpacity, 0, 1) * 100)
 			}
 		};
 	}

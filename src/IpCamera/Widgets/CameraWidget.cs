@@ -122,7 +122,9 @@ internal static class CameraWidget
 			return new CameraWidgetView(
 				Placeholder(Strings.Widgets.Camera.NotConfigured()),
 				[],
-				new Dictionary<string, string>());
+				new Dictionary<string, string>(),
+				false,
+				0.6);
 		}
 
 		var appearance = UiWidgetAppearance.Read(data);
@@ -219,7 +221,7 @@ internal static class CameraWidget
 			]
 		};
 
-		return new CameraWidgetView(root, overlays, openTargets);
+		return new CameraWidgetView(root, overlays, openTargets, controlsEnabled, controlsOpacity);
 	}
 
 	internal static UiButton OpenButton(string key)
@@ -475,7 +477,11 @@ internal static class CameraWidget
 		};
 	}
 
-	public static UiElement BuildModal(UiSurface surface, string? providerId)
+	public static UiElement BuildModal(
+		UiSurface surface,
+		string? providerId,
+		Func<string, CameraDefinition?>? findCamera = null,
+		CameraControlHandler? control = null)
 	{
 		var data = UiWidgetSurface.Data(surface);
 		var cameraId = ReadString(data, CameraKey);
@@ -485,22 +491,35 @@ internal static class CameraWidget
 			return Placeholder(Strings.Widgets.Camera.NotConfigured());
 		}
 
+		var children = new List<UiElement>
+		{
+			new UiVideoStream
+			{
+				Key = "stream",
+				Stream = UiValue.Of(new UiVideoStreamReference { Provider = providerId, Id = cameraId }),
+				Fit = UiValue.Of(FitCover),
+				Fill = true,
+				Fallback = Placeholder(Strings.Widgets.Camera.UpdateRequired())
+			}
+		};
+
+		var wantsControls = data.ValueKind != JsonValueKind.Object ||
+			!data.TryGetProperty(ControlsKey, out var storedControls) ||
+			storedControls.ValueKind != JsonValueKind.False;
+		var controlsOpacity =
+			Math.Clamp(ReadNumber(data, ControlsOpacityKey, 60), 0, 100) / 100.0;
+
+		if (wantsControls && control is not null && findCamera?.Invoke(cameraId) is not null)
+		{
+			children.Add(ArrowPad(cameraId, controlsOpacity, control, "modal"));
+		}
+
 		return new UiStack
 		{
 			Key = "modal",
 			Fill = true,
 			Background = UiValue.Of("#000000"),
-			Children =
-			[
-				new UiVideoStream
-				{
-					Key = "stream",
-					Stream = UiValue.Of(new UiVideoStreamReference { Provider = providerId, Id = cameraId }),
-					Fit = UiValue.Of(FitCover),
-					Fill = true,
-					Fallback = Placeholder(Strings.Widgets.Camera.UpdateRequired())
-				}
-			]
+			Children = children
 		};
 	}
 
@@ -763,7 +782,9 @@ internal static class CameraWidget
 internal sealed record CameraWidgetView(
 	UiElement Root,
 	IReadOnlyList<CameraOverlay> Overlays,
-	IReadOnlyDictionary<string, string> OpenTargets);
+	IReadOnlyDictionary<string, string> OpenTargets,
+	bool Controls,
+	double ControlsOpacity);
 
 /// <summary>The small status pill drawn over the picture: a live dot and the age of the last frame.</summary>
 internal sealed class CameraOverlay(

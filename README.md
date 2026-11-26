@@ -217,7 +217,8 @@ camera --HTTP/RTSP--> plugin (one producer per camera) --multipart MJPEG--> 127.
 
 - MJPEG only. Every Macro Deck client can play it; the plugin does not produce HLS.
 - The enlarged view is a Macro Deck modal. Its box is fixed by the client at roughly 34rem by 36rem on
-  the desktop, and a plugin cannot make it true full screen.
+  the desktop, and a plugin cannot make it true full screen. The modal carries movement arrows when the
+  tile that opened it has them enabled; a Show camera action enables them by default.
 - Panning inside a filled frame is not supported by Macro Deck's video component today. It crops inside
   its own element, so a transform can only move the cropped picture, not reveal the hidden part.
 - ONVIF discovery follows the standard WS-Discovery and WS-Security flow and is covered by protocol

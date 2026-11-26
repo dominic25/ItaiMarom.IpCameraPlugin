@@ -199,8 +199,13 @@ internal sealed class PluginIntegration : IPluginIntegration,
 				id => _registry.Find(id)?.Definition,
 				ControlCameraAsync,
 				openTargets);
+			var controls = CameraWallView.ReadControls(configuration);
 
-			return new CameraModalSession(new UiView(surface, wall), openTargets);
+			return new CameraModalSession(
+				new UiView(surface, wall),
+				openTargets,
+				controls.Controls,
+				controls.Opacity);
 		}
 
 		if (surface.Kind == UiSurfaceKinds.Config &&
@@ -220,7 +225,13 @@ internal sealed class PluginIntegration : IPluginIntegration,
 			surface.Attributes.TryGetValue(UiDialogSurfaceAttributes.ViewId, out var viewId) &&
 			IsCameraModal(viewId.GetString()))
 		{
-			return Create(surface, CameraWidget.BuildModal(surface, _providerQualifiedId));
+			return Create(
+				surface,
+				CameraWidget.BuildModal(
+					surface,
+					_providerQualifiedId,
+					id => _registry.Find(id)?.Definition,
+					ControlCameraAsync));
 		}
 
 		var widgetTypeId = _widgetTypeId;
@@ -252,6 +263,8 @@ internal sealed class PluginIntegration : IPluginIntegration,
 			return new CameraModalSession(
 				new UiView(surface, view.Root),
 				view.OpenTargets,
+				view.Controls,
+				view.ControlsOpacity,
 				view.Overlays.Count == 0
 					? null
 					: () =>

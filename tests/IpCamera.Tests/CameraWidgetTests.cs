@@ -309,6 +309,58 @@ public sealed class CameraWidgetTests
 	}
 
 	[Test]
+	public void The_modal_offers_the_movement_arrows()
+	{
+		var surface = DialogSurface(new { camera = "camera-1", controls = true, controlsOpacity = 40 });
+
+		using var ui = new UiView(
+			surface,
+			CameraWidget.BuildModal(
+				surface,
+				ProviderId,
+				_ => Stream().Definition,
+				(_, _, _) => Task.CompletedTask));
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(ContainsId(ui.Tree.Root, "modal-left"), Is.True);
+			Assert.That(ContainsId(ui.Tree.Root, "modal-up"), Is.True);
+		});
+	}
+
+	[Test]
+	public void The_modal_offers_arrows_even_without_stored_controls()
+	{
+		var surface = DialogSurface(new { camera = "camera-1" });
+
+		using var ui = new UiView(
+			surface,
+			CameraWidget.BuildModal(
+				surface,
+				ProviderId,
+				_ => Stream().Definition,
+				(_, _, _) => Task.CompletedTask));
+
+		Assert.That(ContainsId(ui.Tree.Root, "modal-left"), Is.True);
+	}
+
+	[Test]
+	public void The_modal_leaves_the_arrows_out_when_controls_are_off()
+	{
+		var surface = DialogSurface(new { camera = "camera-1", controls = false });
+
+		using var ui = new UiView(
+			surface,
+			CameraWidget.BuildModal(
+				surface,
+				ProviderId,
+				_ => Stream().Definition,
+				(_, _, _) => Task.CompletedTask));
+
+		Assert.That(ContainsId(ui.Tree.Root, "modal-left"), Is.False);
+	}
+
+	[Test]
 	public void The_movement_arrows_appear_when_they_are_enabled()
 	{
 		var surface = Surface(new { camera = "camera-1", controls = true, controlsOpacity = 40 });
@@ -499,23 +551,32 @@ public sealed class CameraWidgetTests
 		Assert.Multiple(() =>
 		{
 			Assert.That(view.OpenTargets["open-camera"], Is.EqualTo("camera-1"));
-			Assert.That(HasId(ui.Tree.Root, "open-camera"), Is.True);
+			Assert.That(ContainsId(ui.Tree.Root, "open-camera"), Is.True);
 		});
 	}
 
-	private static bool HasId(UiNode node, string id)
+	private static UiSurface Surface(object data)
 	{
-		return node.Id.EndsWith(id, StringComparison.Ordinal) ||
-			node.Children.Any(child => HasId(child, id));
-	}
-
-	private static UiSurface Surface(object data)	{
 		return new UiSurface
 		{
 			Kind = UiSurfaceKinds.Widget,
 			SessionMode = UiSessionModes.Shared,
 			Attributes = new Dictionary<string, JsonElement>(StringComparer.Ordinal)
 			{
+				["data"] = JsonSerializer.SerializeToElement(data)
+			}
+		};
+	}
+
+	private static UiSurface DialogSurface(object data)
+	{
+		return new UiSurface
+		{
+			Kind = UiSurfaceKinds.Dialog,
+			SessionMode = UiSessionModes.Exclusive,
+			Attributes = new Dictionary<string, JsonElement>(StringComparer.Ordinal)
+			{
+				["viewId"] = JsonSerializer.SerializeToElement(ShowCameraAction.ModalViewId),
 				["data"] = JsonSerializer.SerializeToElement(data)
 			}
 		};

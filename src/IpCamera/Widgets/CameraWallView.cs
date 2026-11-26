@@ -23,8 +23,7 @@ internal static class CameraWallView
 		Func<string, CameraDefinition?>? findCamera = null,
 		CameraControlHandler? control = null,
 		Dictionary<string, string>? openTargets = null)
-	{
-		configuration = Normalize(configuration);
+	{		configuration = Normalize(configuration);
 
 		var cameras = _cameraKeys
 			.Select(key => ReadString(configuration, key))
@@ -97,6 +96,15 @@ internal static class CameraWallView
 			Background = UiValue.Of("#000000"),
 			Children = rows
 		};
+	}
+
+	internal static (bool Controls, double Opacity) ReadControls(JsonElement configuration)
+	{
+		configuration = Normalize(configuration);
+
+		return (
+			ReadBool(configuration, CameraWidget.ControlsKey),
+			Math.Clamp(ReadNumber(configuration, CameraWidget.ControlsOpacityKey, 60), 0, 100) / 100.0);
 	}
 
 	public static UiStack BuildConfiguration(JsonElement configuration)
